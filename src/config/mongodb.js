@@ -1,6 +1,7 @@
 const { MongoClient, ObjectId } = require("mongodb");
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/?directConnection=true";
+// Check for MONGODB_URI, or any custom prefix you might have used in Vercel (e.g., MONGODB_URL, NEW_MONGODB_URI)
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGODB_URL || process.env.NEW_MONGODB_URI || process.env.STORAGE_MONGODB_URI || "mongodb://localhost:27017/?directConnection=true";
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || "dynamics_node";
 const MONGODB_SERVER_SELECTION_TIMEOUT_MS = Number(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || 5000);
 
