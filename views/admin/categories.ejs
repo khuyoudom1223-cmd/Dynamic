@@ -29,16 +29,16 @@
         <tbody>
           <% categories.forEach((category) => { %>
             <tr>
-              <td><%= category.id %></td>
-              <td>
+              <td data-label="ID"><code><%= category.id.substring(0, 8) %>...</code></td>
+              <td data-label="Name">
                 <form class="inline-form" method="post" action="/admin/categories/<%= category.id %>?_method=PUT">
                   <input type="text" name="name" value="<%= category.name %>" required />
                   <button class="btn-inline" type="submit">Update</button>
                 </form>
               </td>
-              <td>
+              <td data-label="Actions">
                 <form method="post" action="/admin/categories/<%= category.id %>?_method=DELETE" onsubmit="return confirm('Delete this category?')">
-                  <button class="ghost-btn" type="submit">Delete</button>
+                  <button class="ghost-btn" style="width: 100%;" type="submit">Delete</button>
                 </form>
               </td>
             </tr>

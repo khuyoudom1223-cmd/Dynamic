@@ -8,23 +8,38 @@
     <nav class="main-nav" id="main-nav">
       <div class="menu-head">
         <strong>Navigation</strong>
-        <button class="theme-toggle menu-theme-toggle" type="button" aria-label="Toggle light and dark theme" data-theme-toggle>Theme</button>
+        <button class="theme-toggle menu-theme-toggle" type="button" aria-label="Toggle light and dark theme" data-theme-toggle>
+          <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
       </div>
 
       <a href="/" class="<%= path === '/' ? 'is-active' : '' %>">Home</a>
-      <a href="/products" class="<%= path.startsWith('/products') ? 'is-active' : '' %>">Products / Services</a>
-      <a href="/about" class="<%= path === '/about' ? 'is-active' : '' %>">About</a>
-      <a href="/contact" class="<%= path === '/contact' ? 'is-active' : '' %>">Contact</a>
-      <a href="/orders" class="<%= path.startsWith('/orders') ? 'is-active' : '' %>">Orders</a>
-      <a href="/admin" class="<%= path.startsWith('/admin') ? 'is-active' : '' %>">Dashboard</a>
-      <form action="/logout" method="post" class="menu-logout-form">
-        <button type="submit" class="menu-logout-btn">Logout</button>
-      </form>
+      <% if (currentUser && currentUser.role === 'admin') { %>
+        <a href="/admin" class="<%= path === '/admin' ? 'is-active' : '' %>">Dashboard</a>
+        <a href="/admin/orders" class="<%= path.startsWith('/admin/orders') ? 'is-active' : '' %>">Orders Management</a>
+        <a href="/admin/users" class="<%= path.startsWith('/admin/users') ? 'is-active' : '' %>">Users Management</a>
+        <!-- Ensure settings path exists or use a related path -->
+        <a href="/admin/categories" class="<%= path.startsWith('/admin/categories') ? 'is-active' : '' %>">Category</a>
+      <% } else if (currentUser) { %>
+        <a href="/orders" class="<%= path.startsWith('/orders') ? 'is-active' : '' %>">Order Page</a>
+      <% } %>
+      
+      <% if (currentUser) { %>
+        <form action="/logout" method="post" class="menu-logout-form">
+          <button type="submit" class="menu-logout-btn">Logout</button>
+        </form>
+      <% } else { %>
+        <a href="/login" class="<%= path === '/login' ? 'is-active' : '' %>">Login</a>
+      <% } %>
     </nav>
 
     <button class="menu-backdrop" type="button" aria-label="Close menu" data-menu-backdrop></button>
 
     <button class="menu-toggle" type="button" aria-label="Toggle navigation" data-menu-toggle>Menu</button>
-    <button class="theme-toggle desktop-theme-toggle" type="button" aria-label="Toggle dark mode" data-theme-toggle>Theme</button>
+    <button class="theme-toggle desktop-theme-toggle" type="button" aria-label="Toggle dark mode" data-theme-toggle>
+      <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+    </button>
   </div>
 </header>
