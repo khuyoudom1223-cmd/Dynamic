@@ -1,2 +1,7 @@
 node_modules/
 .env
+public/uploads/
+*.log
+database.sqlite
+khqr-next-checkout/.next/
+demo-integration-api-bakong-khqr-main/node_modules/

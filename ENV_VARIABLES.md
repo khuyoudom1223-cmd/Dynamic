@@ -71,6 +71,98 @@ This document explains all environment variables used by the application.
 
 ## Optional / Legacy Variables
 
+### `TELEGRAM_BUY_LINK`
+- **Type:** String (URL)
+- **Default:** `https://t.me/kuhyoudom`
+- **Description:** Telegram link used by the Buy Now buttons on storefront pages
+- **Example:** `TELEGRAM_BUY_LINK=https://t.me/kuhyoudom`
+- **Note:** Use a Telegram `https://t.me/...` link so mobile devices can open the app when installed and fall back to the browser otherwise.
+
+## Bakong KHQR / Payment Integration
+
+### `BAKONG_DEV_BASE_API_URL`
+- **Type:** String (URL)
+- **Default:** `https://sit-api-bakong.nbc.gov.kh/v1`
+- **Description:** Bakong sandbox API base URL used outside production
+
+### `BAKONG_PROD_BASE_API_URL`
+- **Type:** String (URL)
+- **Default:** `https://api-bakong.nbc.gov.kh/v1`
+- **Description:** Bakong production API base URL used when `NODE_ENV=production`
+
+### `BAKONG_BASE_API_URL`
+- **Type:** String (URL)
+- **Default:** None
+- **Description:** Overrides the automatic dev/prod Bakong base URL selection
+
+### `BAKONG_TOKEN`
+- **Type:** String
+- **Default:** None (REQUIRED)
+- **Description:** Bakong API bearer token used for payment generation and status checks
+
+### `BAKONG_MERCHANT_ID`
+- **Type:** String
+- **Default:** None (REQUIRED)
+- **Description:** Merchant Bakong account ID used to generate KHQR payloads
+
+### `BAKONG_MERCHANT_NAME`
+- **Type:** String
+- **Default:** None (REQUIRED)
+- **Description:** Display name embedded in the KHQR payload
+
+### `BAKONG_ACQUIRING_BANK`
+- **Type:** String
+- **Default:** `Dev Bank`
+- **Description:** Acquiring bank identifier required by the Bakong SDK merchant payload
+
+### `BAKONG_MERCHANT_CITY`
+- **Type:** String
+- **Default:** `Phnom Penh`
+- **Description:** Merchant city embedded in the KHQR payload
+
+### `BAKONG_CHECK_TRANSACTION_PATH`
+- **Type:** String
+- **Default:** `/check_transaction_by_md5`
+- **Description:** Bakong API path used to check payment status by MD5 hash
+
+### `BAKONG_POLL_TIMEOUT_MS`
+- **Type:** Number (milliseconds)
+- **Default:** `60000`
+- **Description:** Maximum wait time for payment confirmation before returning timeout
+
+### `BAKONG_POLL_INTERVAL_MS`
+- **Type:** Number (milliseconds)
+- **Default:** `2000`
+- **Description:** Delay between Bakong transaction status checks
+
+## File Upload Storage
+
+### `FILE_STORAGE`
+- **Type:** String (`local`|`cloudinary`)
+- **Default:** `local`
+- **Description:** Selects where uploaded images/videos are stored
+- **Example:** `FILE_STORAGE=local`
+
+### `CLOUDINARY_CLOUD_NAME`
+- **Type:** String
+- **Default:** None
+- **Description:** Cloudinary cloud name (required when `FILE_STORAGE=cloudinary`)
+
+### `CLOUDINARY_API_KEY`
+- **Type:** String
+- **Default:** None
+- **Description:** Cloudinary API key (required when `FILE_STORAGE=cloudinary`)
+
+### `CLOUDINARY_API_SECRET`
+- **Type:** String
+- **Default:** None
+- **Description:** Cloudinary API secret (required when `FILE_STORAGE=cloudinary`)
+
+### `CLOUDINARY_FOLDER`
+- **Type:** String
+- **Default:** `dynamics-node/uploads`
+- **Description:** Target Cloudinary folder for uploaded product assets
+
 ### `NODE_ENV`
 - **Type:** String (development|production)
 - **Default:** Auto-detected
@@ -110,6 +202,23 @@ MONGODB_DB_NAME=dynamics_node
 MONGODB_SERVER_SELECTION_TIMEOUT_MS=5000
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=admin123
+TELEGRAM_BUY_LINK=https://t.me/kuhyoudom
+FILE_STORAGE=local
+BAKONG_DEV_BASE_API_URL=https://sit-api-bakong.nbc.gov.kh/v1
+BAKONG_TOKEN=<bakong-token>
+BAKONG_MERCHANT_ID=<bakong-account-id>
+BAKONG_MERCHANT_NAME=SOKLIN CHEN
+BAKONG_ACQUIRING_BANK=Dev Bank
+BAKONG_MERCHANT_CITY=Phnom Penh
+```
+
+### Cloudinary Upload Mode (.env)
+```env
+FILE_STORAGE=cloudinary
+CLOUDINARY_CLOUD_NAME=<your-cloud-name>
+CLOUDINARY_API_KEY=<your-api-key>
+CLOUDINARY_API_SECRET=<your-api-secret>
+CLOUDINARY_FOLDER=dynamics-node/uploads
 ```
 
 ### Vercel Production
@@ -122,6 +231,14 @@ MONGODB_DB_NAME=dynamics_node
 MONGODB_SERVER_SELECTION_TIMEOUT_MS=10000
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=<secure-password>
+TELEGRAM_BUY_LINK=https://t.me/kuhyoudom
+NODE_ENV=production
+BAKONG_PROD_BASE_API_URL=https://api-bakong.nbc.gov.kh/v1
+BAKONG_TOKEN=<bakong-token>
+BAKONG_MERCHANT_ID=<bakong-account-id>
+BAKONG_MERCHANT_NAME=SOKLIN CHEN
+BAKONG_ACQUIRING_BANK=Dev Bank
+BAKONG_MERCHANT_CITY=Phnom Penh
 ```
 
 ### Docker
@@ -133,6 +250,7 @@ MONGODB_URI=mongodb://mongo:27017
 MONGODB_DB_NAME=dynamics_node
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=admin123
+TELEGRAM_BUY_LINK=https://t.me/kuhyoudom
 ```
 
 ## How to Generate Secure Secrets
@@ -165,6 +283,7 @@ openssl rand -hex 32
 - `MONGODB_SERVER_SELECTION_TIMEOUT_MS` - Defaults to 5000
 - `ADMIN_EMAIL` - Defaults to admin@example.com
 - `ADMIN_PASSWORD` - Defaults to admin123
+- `TELEGRAM_BUY_LINK` - Defaults to https://t.me/kuhyoudom
 
 ## Security Best Practices
 

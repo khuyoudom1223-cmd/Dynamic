@@ -1,0 +1,160 @@
+<%- include('partials/head', { title }) %>
+<%- include('partials/navbar') %>
+
+<style>
+  .gallery-page {
+    padding: 4rem 0 5rem;
+  }
+
+  .gallery-hero {
+    margin-bottom: 2rem;
+  }
+
+  .gallery-hero h1 {
+    font-size: clamp(2.25rem, 4vw, 3.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    margin: 0 0 0.75rem 0;
+    color: var(--text);
+  }
+
+  .gallery-hero p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 1.05rem;
+    line-height: 1.6;
+    max-width: 720px;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: stretch;
+  }
+
+  .gallery-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+    min-height: 100%;
+  }
+
+  .gallery-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--brand) 22%, var(--line));
+  }
+
+  .gallery-card-image {
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    position: relative;
+  }
+
+  .gallery-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .gallery-card:hover .gallery-card-image img {
+    transform: scale(1.04);
+  }
+
+  .gallery-card-body {
+    padding: 1.1rem 1.15rem 1.2rem;
+  }
+
+  .gallery-card-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+  }
+
+  .gallery-card-description {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .gallery-empty {
+    grid-column: 1 / -1;
+    padding: 4rem 1.5rem;
+    text-align: center;
+    border: 1px dashed var(--line);
+    border-radius: 24px;
+    color: var(--muted);
+    background: var(--bg-soft);
+  }
+
+  @media (max-width: 420px) {
+    .gallery-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .gallery-card-body {
+      padding: 0.95rem 0.95rem 1rem;
+    }
+
+    .gallery-card-title {
+      font-size: 1rem;
+    }
+
+    .gallery-card-description {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .gallery-page {
+      padding-top: 2.5rem;
+    }
+  }
+</style>
+
+<main class="shell gallery-page">
+  <section class="gallery-hero">
+    <span class="section-label">Gallery</span>
+    <h1>Browse the collection</h1>
+    <p>Cards are arranged in a clean two-column grid with smooth spacing, vertical scrolling, and responsive behavior for smaller screens.</p>
+  </section>
+
+  <section class="gallery-grid">
+    <% if (galleryItems && galleryItems.length > 0) { %>
+      <% galleryItems.forEach((item) => { %>
+        <% const title = item.name || item.title || 'Untitled'; %>
+        <% const description = (item.description || '').trim(); %>
+        <article class="gallery-card">
+          <div class="gallery-card-image">
+            <img src="<%= item.image || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200' %>" alt="<%= title %>" />
+          </div>
+          <div class="gallery-card-body">
+            <h2 class="gallery-card-title"><%= title %></h2>
+            <% if (description) { %>
+              <p class="gallery-card-description"><%= description.length > 120 ? description.slice(0, 120) + '...' : description %></p>
+            <% } %>
+          </div>
+        </article>
+      <% }) %>
+    <% } else { %>
+      <div class="gallery-empty">
+        <h2 style="margin: 0 0 0.5rem 0; color: var(--text);">No gallery items yet</h2>
+        <p style="margin: 0;">Add products with images to populate this screen.</p>
+      </div>
+    <% } %>
+  </section>
+</main>
+
+<%- include('partials/footer') %>

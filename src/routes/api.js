@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const { apiAuth, apiAdmin } = require("../middleware/auth");
 const { getDb, toObjectId } = require("../config/mongodb");
+const bakongService = require("../services/BakongService");
+
 
 const router = express.Router();
 
@@ -26,6 +28,16 @@ function normalizeId(doc) {
     id: doc._id.toString()
   };
 }
+
+function toApiErrorResponse(error) {
+  return {
+    status: "error",
+    paid: false,
+    message: error.message || "Unexpected error"
+  };
+}
+
+
 
 router.post(
   "/auth/register",
@@ -88,6 +100,8 @@ router.post(
 );
 
 router.post("/auth/logout", (_req, res) => res.json({ message: "Logged out" }));
+
+
 
 router.get("/products", async (req, res) => {
   const db = getDb();
@@ -325,6 +339,128 @@ router.put("/orders/:id/status", apiAuth, apiAdmin, async (req, res) => {
   await db.collection("orders").updateOne({ _id: orderId }, { $set: { status: nextStatus } });
   const updated = await db.collection("orders").findOne({ _id: orderId });
   return res.json(normalizeId(updated));
+});
+
+
+
+
+router.post("/generate-khqr", async (req, res) => {
+  try {
+    const { product_id, amount } = req.body;
+    if (!product_id || !amount) {
+      return res.status(400).json({ status: "error", message: "Product ID and amount are required" });
+    }
+
+    // Get the item (could be product or category)
+    const db = getDb();
+    let product_id_obj = toObjectId(product_id);
+    let category_id_obj = null;
+    
+    // First try finding as product
+    const product = await db.collection("products").findOne({ _id: product_id_obj });
+    if (product) {
+      category_id_obj = product.category_id;
+    } else {
+      // If not product, try finding as category
+      const category = await db.collection("categories").findOne({ _id: product_id_obj });
+      if (category) {
+        category_id_obj = category._id;
+        product_id_obj = null; // Clear product_id if it's a category purchase
+      }
+    }
+
+    // 1. Create the Order with 'pending' status first
+    const orderData = {
+      product_id: product_id_obj,
+      category_id: category_id_obj,
+      total_price: parseFloat(amount),
+      status: "pending",
+      created_at: new Date()
+    };
+
+    if (req.session && req.session.user) {
+      orderData.user_id = toObjectId(req.session.user.id);
+    }
+
+    const orderResult = await db.collection("orders").insertOne(orderData);
+    const order_id = orderResult.insertedId;
+
+    // 2. Generate KHQR (passing the new order ID's string representation as billNumber)
+    const result = await bakongService.generateKHQR(amount, "USD", order_id.toString());
+    if (!result.success) {
+      // If QR generation fails, we might want to delete the pending order or just leave it
+      return res.status(500).json({ status: "error", message: result.message });
+    }
+
+    // 3. Save the pending transaction log
+    await db.collection("payment_logs").insertOne({
+      order_id: order_id,
+      product_id: product_id_obj,
+      category_id: category_id_obj,
+      amount: parseFloat(amount),
+      transaction_id: result.md5,
+      status: "PENDING",
+      created_at: new Date()
+    });
+
+    return res.json({
+      status: "success",
+      transaction_id: result.md5,
+      qr_code: result.qr
+    });
+  } catch (error) {
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+});
+
+router.get("/check-payment", async (req, res) => {
+  try {
+    const { transaction_id } = req.query; // This is the MD5
+    if (!transaction_id) {
+      return res.status(400).json({ status: "error", message: "Transaction ID (md5) is required" });
+    }
+
+    const result = await bakongService.checkPayment(transaction_id);
+
+    if (result.paid) {
+      const db = getDb();
+      // Update payment log
+      const log = await db.collection("payment_logs").findOneAndUpdate(
+        { transaction_id: transaction_id, status: "PENDING" },
+        { $set: { status: "SUCCESS", paid_at: new Date(), raw_data: result.raw } },
+        { returnDocument: "after" }
+      );
+
+      if (log) {
+        // Update the existing pending order to 'paid'
+        await db.collection("orders").updateOne(
+          { _id: toObjectId(log.order_id) },
+          { 
+            $set: { 
+              status: "paid", 
+              transaction_id: transaction_id,
+              paid_at: new Date() 
+            } 
+          }
+        );
+      }
+      
+      return res.json({
+        status: "SUCCESS",
+        message: "Payment successful",
+        data: result
+      });
+    }
+
+    return res.json({
+      status: "PENDING",
+      message: "Payment pending",
+      data: result
+    });
+  } catch (error) {
+    console.error("Error in /check-payment:", error);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
 });
 
 module.exports = router;

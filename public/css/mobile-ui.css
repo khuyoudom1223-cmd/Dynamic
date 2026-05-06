@@ -1,0 +1,756 @@
+/* 
+  ============================================================
+  Mobile Responsive System — Premium 2-Column UI
+  ============================================================
+  Design System:
+    · 2-column card grid on all mobile (≤768px)
+    · Consistent type scale via CSS custom properties
+    · Uniform padding / margin rhythm (4-point base)
+    · Visual hierarchy via size, weight, color, spacing
+    · Glassmorphism card surfaces
+    · Single-column stacking at ≤380px only for extreme small
+  ============================================================
+*/
+
+/* ── 1. MOBILE TOKEN OVERRIDES (≤ 768px) ──────────────────── */
+@media (max-width: 768px) {
+
+    html,
+    body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        position: relative !important;
+        -webkit-overflow-scrolling: touch !important;
+        scroll-behavior: smooth !important;
+    }
+
+    main {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        position: relative !important;
+    }
+
+    /* 1a. Container & Shell */
+    .shell,
+    .container {
+        width: 100% !important;
+        padding-left: var(--space-lg) !important;
+        padding-right: var(--space-lg) !important;
+        box-sizing: border-box !important;
+        max-width: 100% !important;
+    }
+
+    /* 1b. Body base */
+    body {
+        font-size: var(--font-sm) !important;
+        /* 0.875rem — comfortable on small screens */
+        line-height: 1.65 !important;
+    }
+
+    /* ── 2. SCALABLE TYPOGRAPHY HIERARCHY ─────────────────────── */
+    h1 {
+        font-size: var(--font-3xl) !important;
+        line-height: 1.15 !important;
+    }
+
+    h2 {
+        font-size: var(--font-2xl) !important;
+        line-height: 1.2 !important;
+    }
+
+    h3 {
+        font-size: var(--font-xl) !important;
+        line-height: 1.3 !important;
+    }
+
+    h4 {
+        font-size: var(--font-lg) !important;
+        line-height: 1.4 !important;
+    }
+
+    h5,
+    h6 {
+        font-size: var(--font-md) !important;
+        line-height: 1.5 !important;
+    }
+
+    /* ── 3. GLOBAL SECTION SPACING ────────────────────────────── */
+    .section {
+        padding: var(--space-xl) 0 !important;
+        position: relative !important;
+        width: 100% !important;
+        overflow: clip !important;
+        display: block !important;
+    }
+
+    /* Override inline padding in home.ejs */
+    section[style*="padding-bottom: 3rem"] {
+        padding-bottom: var(--space-md) !important;
+    }
+
+    .section-head {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: var(--space-xs) !important;
+        margin-bottom: var(--space-lg) !important;
+    }
+
+    .section-head h2 {
+        margin-bottom: 0 !important;
+        font-size: var(--font-2xl) !important;
+    }
+
+    .section-head p {
+        margin-top: 0 !important;
+        font-size: var(--font-sm) !important;
+        color: var(--muted) !important;
+    }
+
+    /* ── 4. LAYOUT STACKING (single-col structural grids) ─────── */
+    .hero-grid,
+    .detail-grid,
+    .footer-grid,
+    .dashboard-grid,
+    .playlist-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: var(--space-lg) !important;
+    }
+
+    /* two-col keeps its 2 columns on mobile if used for cards */
+    .two-col {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: var(--space-md) !important;
+    }
+
+    /* ── 5. GRID LAYOUT (MOBILE) ────────────────────────── */
+    .cards-grid,
+    .products-grid,
+    .book-cards-grid,
+    .recommended-grid {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: var(--space-md) !important;
+        padding: 0 var(--space-lg) var(--space-lg) !important;
+        margin: var(--space-md) 0 0 !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scroll-snap-type: x mandatory !important;
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+        -webkit-overflow-scrolling: touch !important;
+        width: auto !important;
+        /* Scroll gradient hint */
+        mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    }
+
+    .cards-grid::-webkit-scrollbar,
+    .products-grid::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .cards-grid > *,
+    .products-grid > *,
+    .book-cards-grid > * {
+        flex: 0 0 85vw !important;
+        min-width: 300px !important;
+        max-width: 400px !important;
+        scroll-snap-align: center !important;
+        height: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Full-bleed horizontal scroll container within a padded shell */
+    .shell .cards-grid,
+    .shell .products-grid,
+    .shell .book-cards-grid,
+    .shell .recommended-grid {
+        width: calc(100% + (2 * var(--space-lg))) !important;
+        margin-left: calc(-1 * var(--space-lg)) !important;
+        margin-right: calc(-1 * var(--space-lg)) !important;
+        padding-left: var(--space-lg) !important;
+        padding-right: var(--space-lg) !important;
+        box-sizing: border-box !important;
+    }
+
+    /* ── 6. CARD BASE — GLASSMORPHISM SURFACE ─────────────────── */
+    .card {
+        padding: var(--space-md) !important;
+        border-radius: 20px !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.8) !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .card:active {
+        transform: scale(0.98) !important;
+    }
+
+    /* Make sure link wrappers stretch their height */
+    .cards-grid>a,
+    .products-grid>a {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* ── 7. CATEGORY CARD MOBILE ──────────────────────────────── */
+    .category-card {
+        padding: 0 !important;
+        padding-bottom: 12px !important;
+        min-height: 0 !important;
+        height: auto !important;
+        flex: 1 1 auto !important;
+        border-radius: 16px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+
+    /* Type badge top-right — rescaled */
+    .category-card div[style*="position: absolute"] {
+        padding: 0.5rem !important;
+        z-index: 10;
+    }
+
+    .category-card div[style*="position: absolute"] span {
+        font-size: 0.55rem !important;
+        padding: 3px 7px !important;
+        border-radius: 6px !important;
+    }
+
+    /* Thumbnail image area */
+    .category-card div[style*="height: 160px"],
+    .category-card>div>div[style*="height: 160px"] {
+        height: 280px !important;
+        width: 100% !important;
+        margin-bottom: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    .category-card h3 {
+        margin-top: var(--space-sm) !important;
+        padding: 0 var(--space-sm) !important;
+        font-size: var(--font-md) !important;
+        font-weight: 700 !important;
+        margin-bottom: var(--space-xs) !important;
+        line-height: 1.4 !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+    }
+
+    /* Price / CTA row */
+    .category-card div[style*="margin-top: auto"] {
+        padding: var(--space-md) var(--space-sm) !important;
+        margin-top: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .category-card p {
+        font-size: var(--font-sm) !important;
+        line-height: 1.4 !important;
+        margin: 0 !important;
+    }
+
+    .category-card span[style*="Browse"] {
+        font-size: var(--font-xs) !important;
+    }
+
+    /* ── 8. PRODUCT CARD MOBILE ───────────────────────────────── */
+    .product-card {
+        padding: 0 !important;
+        padding-bottom: 12px !important;
+        border-radius: 16px !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: auto !important;
+    }
+
+    .product-card .product-media,
+    .product-card>div[style*="height: 200px"] {
+        height: 260px !important;
+        border-radius: 0 !important;
+    }
+
+    .product-card .product-media img,
+    .product-card>div[style*="height: 200px"] img {
+        height: 260px !important;
+        object-fit: cover !important;
+    }
+
+    /* Floating badge on product image */
+    .product-card .product-media span,
+    .product-card>div span[style*="position: absolute"] {
+        font-size: 0.6rem !important;
+        padding: 2px 6px !important;
+        top: 0.5rem !important;
+        right: 0.5rem !important;
+    }
+
+    /* Content padding area */
+    .product-card>div[style*="padding: 1.5rem"] {
+        padding: var(--space-sm) !important;
+    }
+
+    /* Category tag */
+    .product-card .tag,
+    .product-card p.tag {
+        font-size: 0.6rem !important;
+        letter-spacing: 0.04em !important;
+        margin-bottom: 2px !important;
+    }
+
+    /* Item type pill */
+    .product-card span[style*="border-radius: 12px"] {
+        font-size: 0.55rem !important;
+        padding: 2px 6px !important;
+    }
+
+    /* Price / access indicator */
+    .product-card div[style*="text-align: right"] span {
+        font-size: 0.7rem !important;
+        padding: 2px 6px !important;
+    }
+
+    /* Product title */
+    .product-card h3 {
+        font-size: var(--font-sm) !important;
+        font-weight: 700 !important;
+        line-height: 1.4 !important;
+        margin-bottom: var(--space-xs) !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+    }
+
+    /* Description — hide to save space in 2-col grid */
+    .product-card p:not(.tag) {
+        display: none !important;
+    }
+
+    /* Action buttons */
+    .product-card .btn {
+        font-size: var(--font-xs) !important;
+        padding: var(--space-xs) var(--space-sm) !important;
+        border-radius: 10px !important;
+        margin-top: var(--space-xs) !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+
+    /* Bottom action area */
+    .product-card>div>div[style*="border-top"] {
+        padding: var(--space-sm) !important;
+        padding-top: var(--space-md) !important;
+        margin-top: auto !important;
+        gap: var(--space-sm) !important;
+    }
+
+    /* Price display in action area */
+    .product-card span[id^="total-"] {
+        font-size: var(--font-lg) !important;
+    }
+
+    /* Quantity controls - compact on mobile */
+    .product-card div[style*="align-items: center"] button {
+        width: 20px !important;
+        height: 20px !important;
+        font-size: 0.7rem !important;
+    }
+
+    /* ── 9. HERO SECTION ──────────────────────────────────────── */
+    .hero {
+        padding: var(--space-2xl) 0 !important;
+        text-align: center !important;
+        position: relative !important;
+        overflow: hidden !important;
+        width: 100% !important;
+    }
+
+    .hero-grid {
+        text-align: center !important;
+        gap: var(--space-md) !important;
+    }
+
+    .hero h1 {
+        font-size: var(--font-3xl) !important;
+        margin-bottom: var(--space-md) !important;
+        line-height: 1.15 !important;
+    }
+
+    .hero p {
+        font-size: var(--font-sm) !important;
+        margin-bottom: var(--space-md) !important;
+        color: #9ca3af !important;
+    }
+
+    .hero .kicker {
+        font-size: 0.65rem !important;
+        letter-spacing: 0.08em !important;
+        margin-bottom: var(--space-sm) !important;
+    }
+
+    .hero-actions {
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: var(--space-sm) !important;
+        align-items: center !important;
+    }
+
+    .hero-actions a.btn,
+    .hero-actions a.btn-outline,
+    .hero-actions .btn,
+    .hero-actions .btn-outline {
+        width: 100% !important;
+        padding: var(--space-md) !important;
+        font-size: var(--font-md) !important;
+        text-align: center !important;
+        border-radius: 14px !important;
+    }
+
+    .hero-image {
+        margin-top: var(--space-lg) !important;
+        text-align: center !important;
+    }
+
+    .hero-image img {
+        max-width: 340px !important;
+        margin: 0 auto !important;
+    }
+
+    /* ── 10. NAVIGATION (Cleaned up - using navbar.ejs internal styles) ── */
+    .site-header {
+        border-bottom: 1px solid var(--line) !important;
+    }
+
+    /* ── 11. VALUE PROPS / FEATURE STRIP ─────────────────────── */
+    .value-strip {
+        margin-top: var(--space-md) !important;
+        /* Reduced from 2rem */
+        padding: var(--space-md) 0 !important;
+        /* Reduced from 2rem */
+    }
+
+    .value-props-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        /* Single column for better balance */
+        gap: var(--space-md) !important;
+        padding: var(--space-md) var(--space-lg) !important;
+    }
+
+    .value-props-grid>div {
+        text-align: center !important;
+        padding: var(--space-md) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
+        border-radius: 14px !important;
+        border: 1px solid rgba(0, 0, 0, 0.06) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    }
+
+    .value-props-grid>div>div[style*="font-size: 2rem"] {
+        font-size: 1.5rem !important;
+        margin-bottom: var(--space-sm) !important;
+    }
+
+    .value-props-grid h4 {
+        font-size: var(--font-sm) !important;
+        font-weight: 700 !important;
+        margin-bottom: var(--space-xs) !important;
+    }
+
+    .value-props-grid p {
+        font-size: var(--font-xs) !important;
+        line-height: 1.5 !important;
+        color: #6b7280 !important;
+        margin: 0 !important;
+    }
+
+    /* ── 12. FILTER BAR ───────────────────────────────────────── */
+    .filter-bar {
+        grid-template-columns: 1fr !important;
+        gap: var(--space-sm) !important;
+    }
+
+    /* ── 13. STAT GRID (DASHBOARD) ───────────────────────────── */
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .stat-card h3 {
+        font-size: var(--font-3xl) !important;
+    }
+
+    /* ── 14. PAGINATION ───────────────────────────────────────── */
+    .pagination {
+        justify-content: center !important;
+        gap: var(--space-xs) !important;
+    }
+
+    .pagination a {
+        padding: 6px 10px !important;
+        font-size: var(--font-xs) !important;
+    }
+
+    /* ── 15. ALERT / FORM ERRORS ─────────────────────────────── */
+    .alert,
+    .form-error {
+        font-size: var(--font-sm) !important;
+        padding: var(--space-sm) var(--space-md) !important;
+        border-radius: 10px !important;
+    }
+
+    /* ── 16. BUTTONS (GLOBAL) ─────────────────────────────────── */
+    .btn,
+    .btn-outline,
+    .ghost-btn {
+        border-radius: 12px !important;
+        font-size: var(--font-sm) !important;
+    }
+
+    /* ── 17. FOOTER ───────────────────────────────────────────── */
+    .site-footer {
+        padding: var(--space-2xl) 0 var(--space-xl) !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+
+
+
+    /* ── 18. SPACING UTILITIES ────────────────────────────────── */
+    .mt-20 {
+        margin-top: var(--space-lg) !important;
+    }
+
+    .mt-10 {
+        margin-top: var(--space-md) !important;
+    }
+}
+
+/* ── 19. EXTRA SMALL DEVICES (≤ 480px) ────────────────────── */
+@media (max-width: 480px) {
+
+    /* Slightly tighten gutter on very small screens */
+    .cards-grid,
+    .products-grid {
+        gap: var(--space-xs) !important;
+    }
+
+    .hero h1 {
+        font-size: var(--font-2xl) !important;
+    }
+
+    .hero-image img {
+        max-width: 220px !important;
+    }
+
+    .section {
+        padding: var(--space-lg) 0 !important;
+    }
+}
+
+/* ── 20. PORTRAIT PHONES (≤ 380px) — single col fallback ──── */
+@media (max-width: 380px) {
+
+    /* Widen card to take up more space on tiniest devices */
+    .cards-grid>*,
+    .products-grid>* {
+        flex: none !important;
+    }
+
+    h1 {
+        font-size: var(--font-2xl) !important;
+    }
+
+    h2 {
+        font-size: var(--font-xl) !important;
+    }
+
+    h3 {
+        font-size: var(--font-lg) !important;
+    }
+
+    .hero-actions a.btn,
+    .hero-actions a.btn-outline {
+        padding: var(--space-sm) var(--space-md) !important;
+    }
+}
+
+/* ── 21. DARK THEME OVERRIDES (mobile) ────────────────────── */
+@media (max-width: 768px) {
+    html[data-theme="dark"] .card {
+        background: rgba(30, 41, 59, 0.92) !important;
+        /* Slate 800 */
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    html[data-theme="dark"] .value-props-grid>div {
+        background: rgba(30, 41, 59, 0.9) !important;
+        border-color: rgba(255, 255, 255, 0.05) !important;
+    }
+
+    html[data-theme="dark"] .category-card {
+        background: rgba(30, 41, 59, 0.92) !important;
+    }
+
+    html[data-theme="dark"] .section-head p {
+        color: var(--muted) !important;
+    }
+
+    /* Refined Typography Scale with Fluid Sizing */
+    --font-3xl: clamp(2rem, 8vw, 3.5rem);
+    --font-2xl: clamp(1.5rem, 6vw, 2.5rem);
+    --font-xl: clamp(1.25rem, 5vw, 2rem);
+    --font-lg: clamp(1.125rem, 4vw, 1.5rem);
+    --font-md: clamp(1rem, 3vw, 1.125rem);
+    --font-sm: 0.875rem;
+    --font-xs: 0.75rem;
+
+    .h1 { font-size: var(--font-3xl) !important; font-weight: 800 !important; letter-spacing: -0.03em !important; }
+    .h2 { font-size: var(--font-2xl) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
+    .h3 { font-size: var(--font-xl) !important; font-weight: 700 !important; }
+    .text-muted { color: var(--muted) !important; }
+    .text-sm { font-size: var(--font-sm) !important; }
+
+    /* Scroll Reveal Animation */
+    .reveal {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .reveal.active {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Recommended for You Section */
+.recommended-grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 2rem;
+    padding: 2rem var(--space-lg) 3rem;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.recommended-grid::-webkit-scrollbar {
+    display: none;
+}
+
+.recommended-card {
+    flex: 0 0 320px;
+    scroll-snap-align: center;
+    background: var(--surface);
+    border-radius: 24px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+}
+
+.recommended-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    border-color: var(--brand-soft);
+}
+
+.recommended-card.featured {
+    flex: 0 0 360px;
+    border: 2px solid var(--brand-soft);
+    background: linear-gradient(to bottom, var(--surface), var(--bg-soft));
+}
+
+.recommended-card .card-media {
+    height: 380px;
+    overflow: hidden;
+    position: relative;
+}
+
+.recommended-card .card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.8s ease;
+}
+
+.recommended-card:hover .card-media img {
+    transform: scale(1.1);
+}
+
+.recommended-card .card-content {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.recommended-card .price-tag {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.02em;
+}
+
+@media (max-width: 768px) {
+    .recommended-grid {
+        gap: 1.25rem;
+        padding-left: var(--space-lg);
+        padding-right: var(--space-lg);
+    }
+    
+    .recommended-card {
+        flex: 0 0 280px;
+    }
+    
+    .recommended-card.featured {
+        flex: 0 0 310px;
+    }
+    
+    .recommended-card .card-media {
+        height: 300px;
+    }
+}
+
+/* Scroll Progress Bar */
+.scroll-progress-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    z-index: 1001;
+    background: transparent;
+}
+
+.scroll-progress-bar {
+    height: 100%;
+    background: var(--brand);
+    width: 0%;
+    transition: width 0.1s ease-out;
+}

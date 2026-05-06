@@ -11,6 +11,7 @@ dotenv.config();
 const webRoutes = require("./src/routes/web");
 const apiRoutes = require("./src/routes/api");
 const { connectMongoDB, getDb } = require("./src/config/mongodb");
+const { setupPaymentsCollection, setupPaymentLogsCollection } = require("./scripts/setupPayments");
 
 let isConnected = false;
 
@@ -23,7 +24,10 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(methodOverride("_method"));
-app.use(express.static(path.join(__dirname, "public")));
+app.use("/css", express.static(path.join(__dirname, "public", "css")));
+app.use("/js", express.static(path.join(__dirname, "public", "js")));
+app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
+app.use("/logo", express.static(path.join(__dirname, "public", "logo")));
 
 app.use(
   session({
@@ -39,6 +43,7 @@ app.use(
 app.use((req, res, next) => {
   res.locals.currentUser = req.session.user || null;
   res.locals.apiToken = req.session.apiToken || null;
+  res.locals.telegramLink = process.env.TELEGRAM_BUY_LINK || "https://t.me/kuhyoudom";
   res.locals.path = req.path;
   next();
 });
@@ -77,19 +82,46 @@ app.use(async (req, res, next) => {
   }
 });
 
-app.use("/api", apiRoutes);
-app.use("/", webRoutes(express.Router()));
+// Global Categories for Navigation
+app.use(async (req, res, next) => {
+  try {
+    const db = getDb();
+    if (db) {
+      const categories = await db.collection("categories").find({}).sort({ name: 1 }).toArray();
+      res.locals.navCategories = categories || [];
+    } else {
+      res.locals.navCategories = [];
+    }
+  } catch (error) {
+    res.locals.navCategories = [];
+  }
+  next();
+});
 
+app.use("/api", apiRoutes);
+
+app.use("/", webRoutes(express.Router()));
 app.use((error, req, res, next) => {
+  const isAdminApi = req.path.startsWith("/admin/api/");
+
   if (error instanceof multer.MulterError) {
     if (error.code === "LIMIT_FILE_SIZE") {
-      return res.redirect("/admin/products?error=Uploaded+file+is+too+large.+Maximum+size+is+200MB.");
+      if (isAdminApi) {
+        return res.status(400).json({ message: "Uploaded file is too large. Maximum size is 1GB." });
+      }
+      return res.redirect("/admin/products?error=Uploaded+file+is+too+large.+Maximum+size+is+1GB.");
     }
 
+    if (isAdminApi) {
+      return res.status(400).json({ message: `Upload failed: ${error.message}` });
+    }
     return res.redirect(`/admin/products?error=${encodeURIComponent(`Upload failed: ${error.message}`)}`);
   }
 
-  if (error && error.message === "Unsupported file type. Please upload image or video files only.") {
+  if (error && error.message === "Unsupported file type. Please upload image, video, or PDF files only.") {
+    if (isAdminApi) {
+      return res.status(400).json({ message: error.message });
+    }
     return res.redirect(`/admin/products?error=${encodeURIComponent(error.message)}`);
   }
 
@@ -176,6 +208,26 @@ async function seedData() {
       role: "admin",
       created_at: new Date()
     });
+  } else {
+    const updates = {};
+    const hasPassword = typeof existingAdmin.password === "string" && existingAdmin.password.length > 0;
+    const passwordMatches = hasPassword ? await bcrypt.compare(adminPassword, existingAdmin.password) : false;
+
+    if (existingAdmin.role !== "admin") {
+      updates.role = "admin";
+    }
+
+    if (!passwordMatches) {
+      updates.password = await bcrypt.hash(adminPassword, 10);
+    }
+
+    if (!existingAdmin.name) {
+      updates.name = "Administrator";
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await usersCollection.updateOne({ _id: existingAdmin._id }, { $set: updates });
+    }
   }
 }
 
@@ -184,6 +236,9 @@ async function startServer() {
     await connectMongoDB();
     isConnected = true;
     await seedData();
+    // Set up payments collection indexes
+    await setupPaymentsCollection(getDb());
+    await setupPaymentLogsCollection(getDb());
 
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
@@ -194,7 +249,7 @@ async function startServer() {
   }
 }
 
-if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+if (!process.env.VERCEL) {
   startServer();
 }
 

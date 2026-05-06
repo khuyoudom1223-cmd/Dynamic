@@ -1,9 +1,13 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
+const { Readable } = require("stream");
 const { body, validationResult } = require("express-validator");
 const upload = require("../middleware/upload");
 const { ensureAuth, ensureAdmin } = require("../middleware/auth");
 const { getDb, toObjectId } = require("../config/mongodb");
+
 
 function getValidationErrors(req) {
   const errors = validationResult(req);
@@ -12,6 +16,168 @@ function getValidationErrors(req) {
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function formatPrice(value) {
+  return Number(value || 0).toFixed(2);
+}
+
+function buildTelegramMessageLink(baseLink, message) {
+  const safeBaseLink = String(baseLink || "https://t.me/kuhyoudom").trim();
+  const separator = safeBaseLink.includes("?") ? "&" : "?";
+  return `${safeBaseLink}${separator}text=${encodeURIComponent(message)}`;
+}
+
+function isLocalUploadPath(value) {
+  return typeof value === "string" && value.startsWith("/uploads/");
+}
+
+function isVideoFileName(value) {
+  return /\.(mp4|webm|mov)$/i.test(String(value || ""));
+}
+
+async function hasPaidCategoryAccess(db, userId, categoryId) {
+  if (!userId || !categoryId) {
+    return false;
+  }
+
+  const userObjectId = toObjectId(userId);
+  const categoryObjectId = toObjectId(categoryId);
+  if (!userObjectId || !categoryObjectId) {
+    return false;
+  }
+
+  const paidOrder = await db.collection("orders").findOne({
+    user_id: userObjectId,
+    category_id: categoryObjectId,
+    status: "paid"
+  });
+
+  return Boolean(paidOrder);
+}
+
+async function hasPaidProductAccess(db, userId, productId) {
+  if (!userId || !productId) return false;
+  const userObjectId = toObjectId(userId);
+  const productObjectId = toObjectId(productId);
+  if (!userObjectId || !productObjectId) return false;
+
+  const paidOrder = await db.collection("orders").findOne({
+    user_id: userObjectId,
+    product_id: productObjectId,
+    status: "paid"
+  });
+
+  return Boolean(paidOrder);
+}
+
+async function canAccessProductVideo(db, product, user) {
+  if (!product || !product.video) {
+    return false;
+  }
+
+  if (user && user.role === "admin") {
+    return true;
+  }
+
+  const category = await db.collection("categories").findOne({ _id: toObjectId(product.category_id) });
+  const isFreeCategory = !category || !category.price || Number(category.price) === 0;
+  const isResource = product.type === "resource";
+
+  if (isFreeCategory || isResource) {
+    return true;
+  }
+
+  const hasCategoryAccess = await hasPaidCategoryAccess(db, user?.id, product.category_id);
+  if (hasCategoryAccess) return true;
+
+  return await hasPaidProductAccess(db, user?.id, product._id);
+}
+
+async function getPaidCategoryIdSet(db, userId) {
+  if (!userId) {
+    return new Set();
+  }
+
+  const userObjectId = toObjectId(userId);
+  if (!userObjectId) {
+    return new Set();
+  }
+
+  const orders = await db.collection("orders").find(
+    { user_id: userObjectId, status: "paid" },
+    { projection: { category_id: 1 } }
+  ).toArray();
+
+  return new Set(
+    orders
+      .map((order) => order.category_id && order.category_id.toString())
+      .filter(Boolean)
+  );
+}
+
+function buildPublicProductStatusClause() {
+  return {
+    $or: [
+      { status: "Active" },
+      { status: "active" },
+      { status: { $exists: false } },
+      { status: null }
+    ]
+  };
+}
+
+function isPublicProductStatus(value) {
+  return value == null || String(value).toLowerCase() === "active";
+}
+
+async function resolveProductForMedia(db, filename) {
+  const uploadPath = `/uploads/${filename}`;
+  return db.collection("products").findOne({
+    $or: [
+      { image: uploadPath },
+      { video: uploadPath },
+      { image: { $regex: `${filename}$`, $options: "i" } },
+      { video: { $regex: `${filename}$`, $options: "i" } }
+    ]
+  });
+}
+
+async function proxyRemoteMedia(req, res, remoteUrl) {
+  const response = await fetch(remoteUrl, {
+    headers: {
+      range: req.headers.range || ""
+    }
+  });
+
+  if (!response.ok || !response.body) {
+    return res.status(502).render("error", {
+      title: "Unavailable",
+      message: "The requested video could not be loaded."
+    });
+  }
+
+  const contentType = response.headers.get("content-type");
+  const contentLength = response.headers.get("content-length");
+  const acceptRanges = response.headers.get("accept-ranges");
+  const contentRange = response.headers.get("content-range");
+
+  if (contentType) {
+    res.setHeader("Content-Type", contentType);
+  }
+  if (contentLength) {
+    res.setHeader("Content-Length", contentLength);
+  }
+  if (acceptRanges) {
+    res.setHeader("Accept-Ranges", acceptRanges);
+  }
+  if (contentRange) {
+    res.setHeader("Content-Range", contentRange);
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+
+  res.status(response.status);
+  Readable.fromWeb(response.body).pipe(res);
 }
 
 function normalizeId(doc) {
@@ -28,6 +194,209 @@ function toCategoryMap(categories) {
     map.set(item._id.toString(), item);
   });
   return map;
+}
+
+const DEFAULT_CATEGORY_NAMES = [
+  "Learning hub",
+  "Listening",
+  "Reading",
+  "Writing",
+  "Speaking",
+  "Grammar",
+  "Vocabulary",
+  "Business English",
+  "General English"
+];
+
+const CATEGORY_SLUG_ROUTES = [
+  { path: "/hub", name: "Learning hub" },
+  { path: "/learning-hub", name: "Learning hub" },
+  { path: "/listening", name: "Listening" },
+  { path: "/reading", name: "Reading" },
+  { path: "/writing", name: "Writing" },
+  { path: "/speaking", name: "Speaking" },
+  { path: "/grammar", name: "Grammar" },
+  { path: "/vocabulary", name: "Vocabulary" },
+  { path: "/business", name: "Business English" },
+  { path: "/business-english", name: "Business English" },
+  { path: "/general", name: "General English" },
+  { path: "/general-english", name: "General English" }
+];
+
+function normalizeCategoryName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function normalizeCategoryKey(value) {
+  return normalizeCategoryName(value).toLowerCase();
+}
+
+async function ensureDefaultCategories(db) {
+  const existingCategories = await db.collection("categories").find({}, { projection: { name: 1 } }).toArray();
+  const existingCategoryKeys = new Set(existingCategories.map((item) => normalizeCategoryKey(item.name)));
+  const categoriesToInsert = DEFAULT_CATEGORY_NAMES
+    .map((name) => normalizeCategoryName(name))
+    .filter((name) => name && !existingCategoryKeys.has(normalizeCategoryKey(name)))
+    .map((name) => ({ name, created_at: new Date() }));
+
+  if (categoriesToInsert.length > 0) {
+    await db.collection("categories").insertMany(categoriesToInsert);
+  }
+}
+
+async function createCategoryIfValid(db, rawName, rawPrice = 0, type = "course", imageUrl = null) {
+  const name = normalizeCategoryName(rawName);
+  if (!name) {
+    return { error: "Category name is required." };
+  }
+
+  let price = Math.max(Number(rawPrice || 0), 0);
+  const cleanType = type || "course";
+
+  // Optional: Enforce price for paid categories if needed, 
+  // but allow 0 during initial creation from product modal to avoid blocking.
+  // const isPaidType = cleanType === "course" || cleanType === "ielts" || cleanType === "level_test" || cleanType === "book";
+  // if (isPaidType && price <= 0) {
+  //   return { error: "Paid categories (Courses, Books, IELTS, Level Tests) must have a price greater than 0." };
+  // }
+
+  // Enforce zero price for resources
+  if (cleanType === "resource") {
+    price = 0;
+  }
+
+  const categories = await db.collection("categories").find({}).toArray();
+  const existing = categories.find((item) => normalizeCategoryKey(item.name) === normalizeCategoryKey(name));
+  if (existing) {
+    return { category: existing, alreadyExists: true };
+  }
+
+  const result = await db.collection("categories").insertOne({
+    name,
+    price,
+    type: cleanType,
+    image: imageUrl,
+    created_at: new Date()
+  });
+  const category = await db.collection("categories").findOne({ _id: result.insertedId });
+  return { category, alreadyExists: false };
+}
+
+function resolveUploadedFileUrl(file) {
+  if (!file) return null;
+  if (file.path && /^https?:\/\//i.test(file.path)) {
+    return file.path;
+  }
+  if (file.filename) {
+    return `/uploads/${file.filename}`;
+  }
+  return null;
+}
+
+function hasCloudinaryCredentials() {
+  return Boolean(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
+}
+
+async function pingCloudinary() {
+  const { v2: cloudinary } = require("cloudinary");
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+
+  return new Promise((resolve, reject) => {
+    cloudinary.api.ping((error, result) => {
+      if (error) {
+        return reject(error);
+      }
+      return resolve(result);
+    });
+  });
+}
+
+function toProductPayload(req, existingProduct = null) {
+  const rawTitle = (req.body.name || req.body.title || "").trim();
+  const rawPrice = req.body.price;
+  const rawStock = req.body.stock;
+  const price = Number(rawPrice);
+  if (!rawTitle) {
+    return { error: "Product name is required." };
+  }
+
+  let stock = Number(rawStock || 0);
+  if (isNaN(stock)) stock = 0;
+
+  const isDigital = (req.body.type === "course" || req.body.type === "book" || req.body.type === "ielts" || req.body.type === "level_test" || req.body.type === "resource" || (req.files?.video && req.files.video.length > 0));
+
+  if (!isDigital && (!Number.isInteger(stock) || stock < 0)) {
+    return { error: "Stock quantity must be a whole number greater than or equal to 0." };
+  }
+
+  if (isDigital) stock = 0;
+
+  const type = req.body.type || "course";
+  const categoryId = toObjectId(req.body.category_id);
+  if (!categoryId && type !== "book") {
+    return { error: "Category is required." };
+  }
+
+  if (type === "book" && (rawPrice === undefined || rawPrice === "" || isNaN(price) || price <= 0)) {
+    return { error: "A price greater than 0 is required for books." };
+  }
+
+  const nextStatus = req.body.status === "Inactive" ? "Inactive" : "Active";
+  const imageFile = req.files?.image?.[0];
+  const pdfFile = req.files?.pdf_file?.[0];
+
+  // Handle multiple videos
+  let videos = [];
+  if (existingProduct && Array.isArray(existingProduct.videos)) {
+    videos = [...existingProduct.videos];
+  } else if (existingProduct && existingProduct.video) {
+    // Migrate single video to array
+    videos = [existingProduct.video];
+  }
+
+  // Handle new uploads
+  if (req.files?.video) {
+    req.files.video.forEach(file => {
+      videos.push(resolveUploadedFileUrl(file));
+    });
+  }
+
+  // Allow deleting videos via a field in the body if needed
+  if (req.body.delete_video_indices) {
+    try {
+      const indicesToDelete = JSON.parse(req.body.delete_video_indices);
+      if (Array.isArray(indicesToDelete)) {
+        videos = videos.filter((_, index) => !indicesToDelete.includes(index));
+      }
+    } catch (e) {
+      console.error("Error parsing delete_video_indices:", e);
+    }
+  }
+
+  return {
+    payload: {
+      name: rawTitle,
+      title: rawTitle,
+      description: (req.body.description || "").trim(),
+      stock,
+      status: nextStatus,
+      category_id: categoryId || null,
+      type: type,
+      price: type === 'book' ? (Number.isFinite(price) ? price : 0) : null,
+      image: resolveUploadedFileUrl(imageFile) || existingProduct?.image || null,
+      pdf_file: resolveUploadedFileUrl(pdfFile) || existingProduct?.pdf_file || null,
+      videos: videos,
+      video: videos[0] || null // Maintain backward compatibility for single video
+    }
+  };
 }
 
 async function getDashboardStats(db) {
@@ -52,22 +421,96 @@ async function getDashboardStats(db) {
 }
 
 module.exports = function webRoutes(router) {
-  router.get("/", async (_req, res) => {
+  CATEGORY_SLUG_ROUTES.forEach(({ path, name }) => {
+    router.get(path, async (_req, res) => {
+      const db = getDb();
+      await ensureDefaultCategories(db);
+
+      const category = await db.collection("categories").findOne({
+        name: { $regex: `^${escapeRegex(name)}$`, $options: "i" }
+      });
+
+      if (!category) {
+        return res.redirect("/products");
+      }
+
+      return res.redirect(`/products?category=${category._id.toString()}`);
+    });
+  });
+
+  router.get("/free-resources", (_req, res) => {
+    return res.redirect("/products?filter=free");
+  });
+
+  router.get("/online-courses", (_req, res) => {
+    return res.redirect("/products?filter=premium");
+  });
+
+  router.get("/ielts", async (_req, res) => {
+    return res.redirect("/products?type=ielts");
+  });
+
+  router.get("/level-test", (_req, res) => {
+    return res.redirect("/products?type=level_test");
+  });
+
+  router.get("/gallery", async (_req, res) => {
     const db = getDb();
-    const [products, categories] = await Promise.all([
-      db.collection("products").find({}).sort({ created_at: -1 }).limit(6).toArray(),
+    const [items, categories] = await Promise.all([
+      db.collection("products")
+        .find(buildPublicProductStatusClause())
+        .sort({ created_at: -1 })
+        .limit(24)
+        .toArray(),
       db.collection("categories").find({}).toArray()
     ]);
 
     const categoryMap = toCategoryMap(categories);
+    const galleryItems = items.map((item) => {
+      const category = item.category_id ? categoryMap.get(item.category_id.toString()) : null;
+      return normalizeId({
+        ...item,
+        category: category ? normalizeId(category) : null
+      });
+    });
+
+    return res.render("gallery", {
+      title: "Gallery",
+      galleryItems
+    });
+  });
+
+
+
+  router.get("/", async (_req, res) => {
+    const db = getDb();
+    const currentUser = _req.session.user || null;
+    const [products, categoriesRaw] = await Promise.all([
+      db.collection("products").find(buildPublicProductStatusClause()).sort({ created_at: 1 }).limit(10).toArray(),
+      db.collection("categories").find({}).toArray()
+    ]);
+
+    // Count active products per category to hide empty ones
+    const categoryStats = await db.collection("products").aggregate([
+      { $match: buildPublicProductStatusClause() },
+      { $group: { _id: "$category_id", count: { $sum: 1 } } }
+    ]).toArray();
+
+    const activeCatIds = new Set(categoryStats.map(s => s._id?.toString()).filter(Boolean));
+    const categories = categoriesRaw.filter(c => activeCatIds.has(c._id.toString()));
+
+    const categoryMap = toCategoryMap(categoriesRaw);
     const featuredProducts = products.map((item) => {
       const category = item.category_id ? categoryMap.get(item.category_id.toString()) : null;
-      return normalizeId({ ...item, category });
+      return normalizeId({ ...item, category: category ? normalizeId(category) : null });
     });
+    const paidCategoryIds = currentUser ? await getPaidCategoryIdSet(db, currentUser.id) : new Set();
 
     return res.render("home", {
       title: "Home",
-      featuredProducts
+      featuredProducts,
+      categories: categories.map(normalizeId),
+      paidCategoryIds
     });
   });
 
@@ -79,20 +522,44 @@ module.exports = function webRoutes(router) {
 
     const q = (req.query.q || "").trim();
     const categoryId = req.query.category || "";
+    const filterType = req.query.filter || ""; // 'free' or 'premium'
+    const productType = req.query.type || ""; // 'course' or 'resource'
 
-    const filter = {};
+    const filterClauses = [buildPublicProductStatusClause()];
+
+    // If filterType or productType is specified, we need to respect the category-based model
+    if (filterType || productType) {
+      const catFilter = {};
+      if (filterType === "free") catFilter.price = { $lte: 0 };
+      if (filterType === "premium") catFilter.price = { $gt: 0 };
+      if (productType) catFilter.type = productType;
+
+      const matchingCats = await db.collection("categories").find(catFilter).toArray();
+      const catIds = matchingCats.map(c => c._id);
+
+      filterClauses.push({ category_id: { $in: catIds } });
+    }
+
     if (q) {
       const safeQuery = escapeRegex(q);
-      filter.$or = [{ title: { $regex: safeQuery, $options: "i" } }, { description: { $regex: safeQuery, $options: "i" } }];
+      filterClauses.push({
+        $or: [
+        { title: { $regex: safeQuery, $options: "i" } },
+        { name: { $regex: safeQuery, $options: "i" } },
+        { description: { $regex: safeQuery, $options: "i" } }
+        ]
+      });
     }
 
     const categoryObjectId = toObjectId(categoryId);
     if (categoryId && categoryObjectId) {
-      filter.category_id = categoryObjectId;
+      filterClauses.push({ category_id: categoryObjectId });
     }
 
+    const filter = filterClauses.length === 1 ? filterClauses[0] : { $and: filterClauses };
+
     const [productsRaw, total, categories] = await Promise.all([
-      db.collection("products").find(filter).sort({ created_at: -1 }).skip(offset).limit(limit).toArray(),
+      db.collection("products").find(filter).sort({ created_at: 1 }).skip(offset).limit(limit).toArray(),
       db.collection("products").countDocuments(filter),
       db.collection("categories").find({}).sort({ name: 1 }).toArray()
     ]);
@@ -100,8 +567,10 @@ module.exports = function webRoutes(router) {
     const categoryMap = toCategoryMap(categories);
     const products = productsRaw.map((item) => {
       const category = item.category_id ? categoryMap.get(item.category_id.toString()) : null;
-      return normalizeId({ ...item, category });
+      return normalizeId({ ...item, category: category ? normalizeId(category) : null });
     });
+    const currentUser = req.session.user || null;
+    const paidCategoryIds = currentUser ? await getPaidCategoryIdSet(db, currentUser.id) : new Set();
 
     return res.render("products", {
       title: "Products",
@@ -111,7 +580,8 @@ module.exports = function webRoutes(router) {
       page,
       pageCount: Math.max(Math.ceil(total / limit), 1),
       q,
-      categoryId
+      categoryId,
+      paidCategoryIds
     });
   });
 
@@ -122,20 +592,212 @@ module.exports = function webRoutes(router) {
       return res.status(404).render("error", { title: "Not Found", message: "Product not found" });
     }
 
-    const product = await db.collection("products").findOne({ _id: productId });
+    // Only show active products to public
+    const product = await db.collection("products").findOne({
+      _id: productId,
+      ...buildPublicProductStatusClause()
+    });
     if (!product) {
-      return res.status(404).render("error", { title: "Not Found", message: "Product not found" });
+      return res.status(404).render("error", { title: "Not Found", message: "Product not found or inactive" });
     }
 
     const category = product.category_id
       ? await db.collection("categories").findOne({ _id: product.category_id })
       : null;
 
+    const currentUser = req.session.user || null;
+    const hasPaidCategory = product.category_id ? await hasPaidCategoryAccess(db, currentUser?.id, product.category_id) : false;
+    const hasPaidProduct = await hasPaidProductAccess(db, currentUser?.id, product._id);
+    const hasPaidAccess = hasPaidCategory || hasPaidProduct;
+    const isPaid = hasPaidAccess;
+    const videoIndex = parseInt(req.query.v || "0");
+    const videoUrl = product.video ? `/media/videos/${product._id.toString()}` : null;
+
     return res.render("product-detail", {
-      title: product.title,
-      product: normalizeId({ ...product, category: normalizeId(category) })
+      title: product.name || product.title,
+      product: normalizeId({ ...product, category: normalizeId(category) }),
+      isPaid,
+      videoUrl,
+      videoIndex,
+      hasPaidAccess: isPaid
     });
   });
+
+  router.get(["/media/videos/:id", "/media/videos/:id/:index"], async (req, res) => {
+    const db = getDb();
+    const productId = toObjectId(req.params.id);
+    const videoIndex = parseInt(req.params.index || "0");
+
+    if (!productId) {
+      return res.status(404).render("error", { title: "Not Found", message: "Video not found" });
+    }
+
+    const product = await db.collection("products").findOne({
+      _id: productId,
+      ...buildPublicProductStatusClause()
+    });
+    if (!product) {
+      return res.status(404).render("error", { title: "Not Found", message: "Video not found" });
+    }
+
+    const videos = Array.isArray(product.videos) ? product.videos : (product.video ? [product.video] : []);
+    const videoPath = videos[videoIndex];
+
+    if (!videoPath) {
+      return res.status(404).render("error", { title: "Not Found", message: "Video not found" });
+    }
+
+    const currentUser = req.session.user || null;
+    const allowed = await canAccessProductVideo(db, product, currentUser);
+    if (!allowed) {
+      return res.status(403).render("error", {
+        title: "Access Denied",
+        message: "Purchase Required: This video is part of a locked category. Please purchase the category to gain access."
+      });
+    }
+
+    if (isLocalUploadPath(videoPath)) {
+      const filename = path.basename(videoPath);
+      const filePath = path.join(process.cwd(), "public", "uploads", filename);
+      try {
+        await fs.promises.access(filePath, fs.constants.R_OK);
+        return res.sendFile(filePath);
+      } catch (_error) {
+        return res.status(404).render("error", { title: "Not Found", message: "Video file not found" });
+      }
+    }
+
+    if (/^https?:\/\//i.test(videoPath)) {
+      return proxyRemoteMedia(req, res, videoPath);
+    }
+
+    return res.status(404).render("error", { title: "Not Found", message: "Video not available" });
+  });
+
+  router.get("/uploads/:filename", async (req, res) => {
+    const db = getDb();
+    const filename = path.basename(req.params.filename || "");
+    if (!filename) {
+      return res.status(404).render("error", { title: "Not Found", message: "File not found" });
+    }
+
+    const filePath = path.join(process.cwd(), "public", "uploads", filename);
+    try {
+      await fs.promises.access(filePath, fs.constants.R_OK);
+    } catch (_error) {
+      return res.status(404).render("error", { title: "Not Found", message: "File not found" });
+    }
+
+    const isVideo = isVideoFileName(filename);
+    const product = await resolveProductForMedia(db, filename);
+    if (isVideo) {
+      if (!product) {
+        return res.status(403).render("error", {
+          title: "Access Denied",
+          message: "Purchase Required: This content is locked."
+        });
+      }
+
+      const currentUser = req.session.user || null;
+      const allowed = await canAccessProductVideo(db, product, currentUser);
+      if (!allowed) {
+        return res.status(403).render("error", {
+          title: "Access Denied",
+          message: "Purchase Required: Please purchase the category to access this video."
+        });
+      }
+    }
+
+    return res.sendFile(filePath);
+  });
+
+  router.post("/orders/buy-now", async (req, res) => {
+    const db = getDb();
+    const productId = req.body.productId ? toObjectId(req.body.productId) : null;
+
+    if (!productId) {
+      return res.status(400).render("error", {
+        title: "Invalid Order",
+        message: "Invalid product selection."
+      });
+    }
+
+    const product = await db.collection("products").findOne({
+      _id: productId,
+      ...buildPublicProductStatusClause()
+    });
+    if (!product) {
+      return res.status(404).render("error", {
+        title: "Error",
+        message: "Product is currently unavailable."
+      });
+    }
+
+    if (product.stock !== undefined && product.stock <= 0) {
+      return res.status(400).render("error", {
+        title: "Error",
+        message: "Product is out of stock."
+      });
+    }
+
+    const totalPrice = Number(product.price || 0);
+    const user = req.session.user || null;
+    const orderData = {
+      total_price: totalPrice,
+      status: totalPrice === 0 ? "completed" : "pending",
+      product_id: productId,
+      created_at: new Date()
+    };
+
+    if (user && user.id) {
+      const userObjectId = toObjectId(user.id);
+      if (userObjectId) {
+        orderData.user_id = userObjectId;
+      }
+    }
+
+    const orderResult = await db.collection("orders").insertOne(orderData);
+
+    // Redirect to orders page
+    return res.redirect("/orders?success=Order+placed");
+  });
+
+  router.post("/orders/buy-category", ensureAuth, async (req, res) => {
+    const db = getDb();
+    const categoryId = toObjectId(req.body.categoryId);
+    if (!categoryId) {
+      return res.status(400).render("error", { title: "Error", message: "Invalid category selection." });
+    }
+
+    const category = await db.collection("categories").findOne({ _id: categoryId });
+    if (!category) {
+      return res.status(404).render("error", { title: "Error", message: "Category not found." });
+    }
+
+    const totalPrice = Number(category.price || 0);
+    const user = req.session.user;
+
+    const productId = req.body.productId ? toObjectId(req.body.productId) : null;
+    const qty = parseInt(req.body.qty || 1);
+
+    const orderData = {
+      user_id: toObjectId(user.id),
+      total_price: totalPrice,
+      status: totalPrice === 0 ? "paid" : "pending",
+      category_id: categoryId,
+      product_id: productId,
+      quantity: qty,
+      type: productId ? "individual_purchase" : "category_subscription",
+      created_at: new Date()
+    };
+
+    const orderResult = await db.collection("orders").insertOne(orderData);
+
+    // Redirect to orders page
+    return res.redirect("/orders?success=Order+placed");
+  });
+
+
 
   router.post("/orders", ensureAuth, async (req, res) => {
     const db = getDb();
@@ -147,6 +809,21 @@ module.exports = function webRoutes(router) {
         title: "Invalid Order",
         message: "Invalid product price."
       });
+    }
+
+    if (productId) {
+      const product = await db.collection("products").findOne({ _id: productId });
+      if (!product || !isPublicProductStatus(product.status)) {
+        return res.status(404).render("error", { title: "Error", message: "Product is currently unavailable." });
+      }
+      if (product.stock !== undefined && product.stock <= 0) {
+        return res.status(400).render("error", { title: "Error", message: "Product is out of stock." });
+      }
+      // Deduct stock
+      await db.collection("products").updateOne(
+        { _id: productId },
+        { $inc: { stock: -1 } }
+      );
     }
 
     const isFreeContent = totalPrice === 0;
@@ -166,23 +843,35 @@ module.exports = function webRoutes(router) {
     return res.redirect("/orders");
   });
 
+
   router.get("/orders", ensureAuth, async (req, res) => {
     const db = getDb();
     const filter = req.session.user.role === "admin" ? {} : { user_id: toObjectId(req.session.user.id) };
-    const [orders, users] = await Promise.all([
+    const [orders, users, products] = await Promise.all([
       db.collection("orders").find(filter).sort({ created_at: -1 }).toArray(),
-      db.collection("users").find({}, { projection: { password: 0 } }).toArray()
+      db.collection("users").find({}, { projection: { password: 0 } }).toArray(),
+      db.collection("products").find({}).toArray()
+
     ]);
-
     const userMap = new Map(users.map((item) => [item._id.toString(), normalizeId(item)]));
-    const resolvedOrders = orders.map((item) =>
-      normalizeId({
-        ...item,
-        user: item.user_id ? userMap.get(item.user_id.toString()) : null
-      })
-    );
+    const productMap = new Map(products.map((item) => [item._id.toString(), normalizeId(item)]));
+    const categoryMap = new Map((await db.collection("categories").find({}).toArray()).map(c => [c._id.toString(), normalizeId(c)]));
 
-    return res.render("orders", {
+    const resolvedOrders = orders.map((item) => {
+      const prod = item.product_id ? productMap.get(item.product_id.toString()) : null;
+      const cat = item.category_id ? categoryMap.get(item.category_id.toString()) : null;
+      const hasAnyVideo = prod && (prod.video || (Array.isArray(prod.videos) && prod.videos.length > 0));
+
+      return normalizeId({
+        ...item,
+        user: item.user_id ? userMap.get(item.user_id.toString()) : null,
+        product: prod,
+        category: cat,
+        canWatch: Boolean(item.status === "paid" && item.product_id && hasAnyVideo)
+      });
+    });
+
+    return res.render("my-orders", {
       title: "My Orders",
       orders: resolvedOrders
     });
@@ -242,7 +931,7 @@ module.exports = function webRoutes(router) {
   router.post(
     "/login",
     [
-      body("email").isEmail().withMessage("Valid email is required"),
+      body("email").notEmpty().withMessage("Email is required"),
       body("password").notEmpty().withMessage("Password is required")
     ],
     async (req, res) => {
@@ -278,7 +967,7 @@ module.exports = function webRoutes(router) {
 
       req.session.apiToken = token;
 
-      return res.redirect(user.role === "admin" ? "/admin" : "/");
+      return res.redirect("/");
     }
   );
 
@@ -313,27 +1002,54 @@ module.exports = function webRoutes(router) {
     return res.redirect("/admin/users");
   });
 
-  router.get("/admin/categories", ensureAuth, ensureAdmin, async (_req, res) => {
+  router.get("/admin/categories", ensureAuth, ensureAdmin, async (req, res) => {
     const db = getDb();
+    await ensureDefaultCategories(db);
     const categories = await db.collection("categories").find({}).sort({ name: 1 }).toArray();
-    return res.render("admin/categories", { title: "Manage Categories", categories: categories.map((item) => normalizeId(item)) });
+    return res.render("admin/categories", {
+      title: "Manage Categories",
+      categories: categories.map((item) => normalizeId(item)),
+      error: req.query.error || "",
+      success: req.query.success || ""
+    });
   });
 
-  router.post("/admin/categories", ensureAuth, ensureAdmin, async (req, res) => {
-    const db = getDb();
-    if (req.body.name && req.body.name.trim()) {
-      await db.collection("categories").insertOne({ name: req.body.name.trim(), created_at: new Date() });
+  router.post("/admin/categories", ensureAuth, ensureAdmin, upload.single("image"), async (req, res) => {
+    try {
+      const db = getDb();
+      const imageUrl = req.file ? resolveUploadedFileUrl(req.file) : null;
+      const result = await createCategoryIfValid(db, req.body.name, req.body.price, req.body.type, imageUrl);
+      if (result.error) {
+        return res.redirect(`/admin/categories?error=${encodeURIComponent(result.error)}`);
+      }
+      return res.redirect("/admin/categories");
+    } catch (err) {
+      console.error("Create category error:", err);
+      return res.redirect("/admin/categories?error=Internal+server+error");
     }
-    return res.redirect("/admin/categories");
   });
 
-  router.put("/admin/categories/:id", ensureAuth, ensureAdmin, async (req, res) => {
+  router.put("/admin/categories/:id", ensureAuth, ensureAdmin, upload.single("image"), async (req, res) => {
     const db = getDb();
     const categoryId = toObjectId(req.params.id);
     if (categoryId) {
-      await db.collection("categories").updateOne({ _id: categoryId }, { $set: { name: req.body.name } });
+      const updateData = {
+        name: req.body.name,
+        price: Math.max(Number(req.body.price || 0), 0),
+        type: req.body.type || "course",
+        updated_at: new Date()
+      };
+
+      if (req.file) {
+        updateData.image = resolveUploadedFileUrl(req.file);
+      }
+
+      await db.collection("categories").updateOne(
+        { _id: categoryId },
+        { $set: updateData }
+      );
     }
-    return res.redirect("/admin/categories");
+    return res.redirect("/admin/categories?success=Category+updated+successfully");
   });
 
   router.delete("/admin/categories/:id", ensureAuth, ensureAdmin, async (req, res) => {
@@ -342,30 +1058,315 @@ module.exports = function webRoutes(router) {
     if (categoryId) {
       await db.collection("categories").deleteOne({ _id: categoryId });
     }
-    return res.redirect("/admin/categories");
+    return res.redirect("/admin/categories?success=Category+deleted+successfully");
+  });
+
+  // Category API routes for the React Dashboard
+  router.get("/admin/api/categories", ensureAuth, ensureAdmin, async (_req, res) => {
+    try {
+      const db = getDb();
+      const categories = await db.collection("categories").find({}).sort({ name: 1 }).toArray();
+      return res.json({ categories: categories.map((item) => normalizeId(item)) });
+    } catch (error) {
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  router.post("/admin/api/categories", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const db = getDb();
+      const result = await createCategoryIfValid(db, req.body.name, req.body.price, req.body.type);
+      if (result.error) {
+        return res.status(400).json({ message: result.error });
+      }
+      return res.status(result.alreadyExists ? 200 : 201).json({
+        message: result.alreadyExists ? "Category already exists" : "Category created",
+        category: normalizeId(result.category)
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   router.get("/admin/products", ensureAuth, ensureAdmin, async (req, res) => {
     const db = getDb();
-    const [products, categories] = await Promise.all([
-      db.collection("products").find({}).sort({ created_at: -1 }).toArray(),
-      db.collection("categories").find({}).sort({ name: 1 }).toArray()
-    ]);
-
-    const categoryMap = toCategoryMap(categories);
-    const resolvedProducts = products.map((item) =>
-      normalizeId({
-        ...item,
-        category: item.category_id ? categoryMap.get(item.category_id.toString()) : null
-      })
-    );
+    await ensureDefaultCategories(db);
+    const storageInfo = typeof upload.getStorageInfo === "function"
+      ? upload.getStorageInfo()
+      : { requestedMode: "Local", activeMode: "Local", isFallback: false, warning: "" };
 
     return res.render("admin/products", {
       title: "Manage Products",
-      products: resolvedProducts,
-      categories: categories.map((item) => normalizeId(item)),
-      uploadError: req.query.error || ""
+      uploadError: req.query.error || "",
+      storageMode: storageInfo.activeMode,
+      storageRequestedMode: storageInfo.requestedMode,
+      storageWarning: storageInfo.warning || ""
     });
+  });
+
+
+
+  router.get("/admin/api/storage/health", ensureAuth, ensureAdmin, async (_req, res) => {
+    const requestedMode = process.env.FILE_STORAGE === "cloudinary" ? "Cloudinary" : "Local";
+    const storageInfo = typeof upload.getStorageInfo === "function"
+      ? upload.getStorageInfo()
+      : { activeMode: "Local", isFallback: false, warning: "" };
+
+    if (requestedMode === "Local") {
+      return res.json({
+        ok: true,
+        requestedMode,
+        activeMode: storageInfo.activeMode,
+        isFallback: storageInfo.isFallback,
+        message: "Local storage is active. No external cloud check required."
+      });
+    }
+
+    if (!hasCloudinaryCredentials()) {
+      return res.status(400).json({
+        ok: false,
+        requestedMode,
+        activeMode: storageInfo.activeMode,
+        isFallback: storageInfo.isFallback,
+        message: "Cloudinary credentials are missing. Configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET."
+      });
+    }
+
+    try {
+      const result = await pingCloudinary();
+      return res.json({
+        ok: true,
+        requestedMode,
+        activeMode: storageInfo.activeMode,
+        isFallback: storageInfo.isFallback,
+        message: "Cloudinary connection is healthy.",
+        cloudinaryStatus: result?.status || "ok"
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        requestedMode,
+        activeMode: storageInfo.activeMode,
+        isFallback: storageInfo.isFallback,
+        message: `Cloudinary connection failed: ${error.message}`
+      });
+    }
+  });
+
+
+  router.post("/orders/checkout-cart", ensureAuth, async (req, res) => {
+    try {
+      const db = getDb();
+      const items = req.body.items || [];
+      const user = req.session.user;
+
+      if (!items.length) {
+        return res.status(400).json({ message: "Cart is empty" });
+      }
+
+      const orderDocs = items.map(item => ({
+        user_id: toObjectId(user.id),
+        category_id: toObjectId(item.categoryId),
+        product_id: toObjectId(item.productId),
+        quantity: parseInt(item.qty) || 1,
+        status: "paid",
+        created_at: new Date(),
+        type: "individual_purchase"
+      }));
+
+      await db.collection("orders").insertMany(orderDocs);
+
+      // Construct Telegram message for the batch order
+      const totalAmount = items.reduce((sum, item) => sum + (parseFloat(item.price) * (parseInt(item.qty) || 1)), 0);
+      const itemLines = items.map(item => `- ${item.name} (Qty: ${item.qty})`).join("\n");
+
+      const telegramMessage = [
+        "📦 New Multi-Item Order",
+        `Buyer: ${user.name || "User"}`,
+        `Email: ${user.email || "Not provided"}`,
+        "\nItems:",
+        itemLines,
+        `\nTotal Amount: $${totalAmount.toFixed(2)}`,
+        `Admin Orders: ${req.protocol}://${req.get("host")}/admin/orders`
+      ].join("\n");
+
+      const telegramUrl = buildTelegramMessageLink(res.locals.telegramLink, telegramMessage);
+
+      return res.json({
+        message: "Order placed successfully",
+        telegramUrl: telegramUrl
+      });
+    } catch (error) {
+      console.error("Checkout error:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  router.get("/orders/my", ensureAuth, async (req, res) => {
+    try {
+      const db = getDb();
+      const user_id = toObjectId(req.session.user.id);
+
+      const [orders, categories, products] = await Promise.all([
+        db.collection("orders").find({ user_id }).sort({ created_at: -1 }).toArray(),
+        db.collection("categories").find({}).toArray(),
+        db.collection("products").find({}).toArray()
+      ]);
+
+      const categoryMap = new Map(categories.map(c => [c._id.toString(), c]));
+      const productMap = new Map(products.map(p => [p._id.toString(), p]));
+
+      const resolvedOrders = orders.map(order => ({
+        ...normalizeId(order),
+        category: order.category_id ? normalizeId(categoryMap.get(order.category_id.toString())) : null,
+        product: order.product_id ? normalizeId(productMap.get(order.product_id.toString())) : null
+      }));
+
+      return res.render("orders", {
+        title: "My Purchases",
+        orders: resolvedOrders
+      });
+    } catch (error) {
+      console.error("My orders error:", error);
+      return res.redirect("/");
+    }
+  });
+
+  router.get("/admin/api/products", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const db = getDb();
+      const search = (req.query.search || "").trim();
+      const status = req.query.status === "Inactive" ? "Inactive" : req.query.status === "Active" ? "Active" : "";
+      const categoryId = req.query.categoryId || "";
+      const type = req.query.type || "";
+
+      const filter = {};
+      if (type) {
+        filter.type = type;
+      }
+      if (search) {
+        const safeQuery = escapeRegex(search);
+        filter.$or = [
+          { title: { $regex: safeQuery, $options: "i" } },
+          { name: { $regex: safeQuery, $options: "i" } },
+          { description: { $regex: safeQuery, $options: "i" } }
+        ];
+      }
+
+      if (status) {
+        filter.status = status;
+      }
+
+      const categoryObjectId = toObjectId(categoryId);
+      if (categoryObjectId) {
+        filter.category_id = categoryObjectId;
+      }
+
+      const [products, categories] = await Promise.all([
+        db.collection("products").find(filter).sort({ created_at: -1 }).toArray(),
+        db.collection("categories").find({}).toArray()
+      ]);
+
+      const categoryMap = toCategoryMap(categories);
+      const resolvedProducts = products.map((item) => {
+        const category = item.category_id ? categoryMap.get(item.category_id.toString()) : null;
+        return normalizeId({
+          ...item,
+          category: category ? normalizeId(category) : null
+        });
+      });
+
+      return res.json({ products: resolvedProducts });
+    } catch (error) {
+      console.error('/admin/api/products error:', error && error.stack ? error.stack : error);
+      // Return JSON so client-side code can consistently parse errors.
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  router.post(
+    "/admin/api/products",
+    ensureAuth,
+    ensureAdmin,
+    upload.fields([
+      { name: "image", maxCount: 1 },
+      { name: "video", maxCount: 20 },
+      { name: "pdf_file", maxCount: 1 }
+    ]),
+    async (req, res) => {
+      const db = getDb();
+      const { payload, error } = toProductPayload(req);
+      if (error) {
+        return res.status(400).json({ message: error });
+      }
+
+      const result = await db.collection("products").insertOne({
+        ...payload,
+        created_at: new Date()
+      });
+
+      const insertedProduct = await db.collection("products").findOne({ _id: result.insertedId });
+      return res.status(201).json({
+        message: "Product added successfully",
+        product: normalizeId(insertedProduct)
+      });
+    }
+  );
+
+  router.put(
+    "/admin/api/products/:id",
+    ensureAuth,
+    ensureAdmin,
+    upload.fields([
+      { name: "image", maxCount: 1 },
+      { name: "video", maxCount: 20 },
+      { name: "pdf_file", maxCount: 1 }
+    ]),
+    async (req, res) => {
+      const db = getDb();
+      const productId = toObjectId(req.params.id);
+      if (!productId) {
+        return res.status(400).json({ message: "Invalid product id." });
+      }
+
+      const existing = await db.collection("products").findOne({ _id: productId });
+      if (!existing) {
+        return res.status(404).json({ message: "Product not found." });
+      }
+
+      const { payload, error } = toProductPayload(req, existing);
+      if (error) {
+        return res.status(400).json({ message: error });
+      }
+
+      await db.collection("products").updateOne(
+        { _id: productId },
+        {
+          $set: payload
+        }
+      );
+
+      const updated = await db.collection("products").findOne({ _id: productId });
+      return res.json({
+        message: "Product updated successfully",
+        product: normalizeId(updated)
+      });
+    }
+  );
+
+  router.delete("/admin/api/products/:id", ensureAuth, ensureAdmin, async (req, res) => {
+    const db = getDb();
+    const productId = toObjectId(req.params.id);
+    if (!productId) {
+      return res.status(400).json({ message: "Invalid product id." });
+    }
+
+    const result = await db.collection("products").deleteOne({ _id: productId });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    return res.json({ message: "Product deleted successfully" });
   });
 
   router.post(
@@ -374,30 +1375,40 @@ module.exports = function webRoutes(router) {
     ensureAdmin,
     upload.fields([
       { name: "image", maxCount: 1 },
-      { name: "video", maxCount: 1 }
+      { name: "video", maxCount: 1 },
+      { name: "pdf_file", maxCount: 1 }
     ]),
     async (req, res) => {
-    const db = getDb();
-    const title = (req.body.title || "").trim();
-    if (!title) {
-      return res.redirect("/admin/products?error=Title+is+required.");
-    }
+      const db = getDb();
+      const title = (req.body.name || req.body.title || "").trim(); // Use name or title
+      if (!title) {
+        return res.redirect("/admin/products?error=Product+Name+is+required.");
+      }
 
-    const categoryId = toObjectId(req.body.category_id);
-    const imageFile = req.files?.image?.[0];
-    const videoFile = req.files?.video?.[0];
-    const parsedPrice = req.body.price === "" || req.body.price === undefined ? null : Number(req.body.price);
+      const type = req.body.type || "course";
+      const categoryId = toObjectId(req.body.category_id);
+      if (!categoryId && type !== "book") {
+        return res.redirect("/admin/products?error=Category+is+required.");
+      }
+      const imageFile = req.files?.image?.[0];
+      const videoFile = req.files?.video?.[0];
+      const parsedPrice = req.body.price === "" || req.body.price === undefined ? null : Number(req.body.price);
 
-    await db.collection("products").insertOne({
-      title,
-      description: req.body.description || "",
-      price: Number.isFinite(parsedPrice) ? parsedPrice : null,
-      category_id: categoryId,
-      image: imageFile ? `/uploads/${imageFile.filename}` : null,
-      video: videoFile ? `/uploads/${videoFile.filename}` : null,
-      created_at: new Date()
-    });
-    return res.redirect("/admin/products");
+      await db.collection("products").insertOne({
+        name: title,
+        title: title, // Keep title for backwards compatibility
+        description: req.body.description || "",
+        price: Number.isFinite(parsedPrice) ? parsedPrice : null,
+        stock: Number(req.body.stock) || 0,
+        status: req.body.status || "Active",
+        type: type,
+        category_id: categoryId,
+        image: resolveUploadedFileUrl(imageFile),
+        videos: req.files?.video ? req.files.video.map(resolveUploadedFileUrl) : [],
+        video: req.files?.video ? resolveUploadedFileUrl(req.files.video[0]) : null,
+        created_at: new Date()
+      });
+      return res.redirect("/admin/products?success=Product+added+successfully");
     }
   );
 
@@ -407,44 +1418,53 @@ module.exports = function webRoutes(router) {
     ensureAdmin,
     upload.fields([
       { name: "image", maxCount: 1 },
-      { name: "video", maxCount: 1 }
+      { name: "video", maxCount: 1 },
+      { name: "pdf_file", maxCount: 1 }
     ]),
     async (req, res) => {
-    const db = getDb();
-    const productId = toObjectId(req.params.id);
-    const title = (req.body.title || "").trim();
-    if (!title) {
-      return res.redirect("/admin/products?error=Title+is+required.");
-    }
-
-    const categoryId = toObjectId(req.body.category_id);
-    if (!productId) {
-      return res.redirect("/admin/products");
-    }
-
-    const existing = await db.collection("products").findOne({ _id: productId });
-    if (!existing) {
-      return res.redirect("/admin/products");
-    }
-
-    const imageFile = req.files?.image?.[0];
-    const videoFile = req.files?.video?.[0];
-    const parsedPrice = req.body.price === "" || req.body.price === undefined ? null : Number(req.body.price);
-
-    await db.collection("products").updateOne(
-      { _id: productId },
-      {
-        $set: {
-          title,
-          description: req.body.description || "",
-          price: Number.isFinite(parsedPrice) ? parsedPrice : null,
-          category_id: categoryId,
-          image: imageFile ? `/uploads/${imageFile.filename}` : existing.image,
-          video: videoFile ? `/uploads/${videoFile.filename}` : existing.video
-        }
+      const db = getDb();
+      const productId = toObjectId(req.params.id);
+      const title = (req.body.name || req.body.title || "").trim(); // Use name or title
+      if (!title) {
+        return res.redirect("/admin/products?error=Product+Name+is+required.");
       }
-    );
-    return res.redirect("/admin/products");
+
+      const type = req.body.type || "course";
+      const categoryId = toObjectId(req.body.category_id);
+      if (!categoryId && type !== "book") {
+        return res.redirect("/admin/products?error=Category+is+required.");
+      }
+      if (!productId) {
+        return res.redirect("/admin/products");
+      }
+
+      const existing = await db.collection("products").findOne({ _id: productId });
+      if (!existing) {
+        return res.redirect("/admin/products");
+      }
+
+      const imageFile = req.files?.image?.[0];
+      const videoFile = req.files?.video?.[0];
+      const parsedPrice = req.body.price === "" || req.body.price === undefined ? null : Number(req.body.price);
+
+      await db.collection("products").updateOne(
+        { _id: productId },
+        {
+          $set: {
+            name: title,
+            title: title, // maintain compatibility
+            description: req.body.description || "",
+            price: Number.isFinite(parsedPrice) ? parsedPrice : null,
+            stock: Number(req.body.stock) || 0,
+            status: req.body.status || "Active",
+            category_id: categoryId,
+            image: resolveUploadedFileUrl(imageFile) || existing.image,
+            videos: req.files?.video ? [...(existing.videos || []), ...req.files.video.map(resolveUploadedFileUrl)] : (existing.videos || []),
+            video: req.files?.video ? resolveUploadedFileUrl(req.files.video[0]) : existing.video
+          }
+        }
+      );
+      return res.redirect("/admin/products?success=Product+updated+successfully");
     }
   );
 
@@ -454,21 +1474,28 @@ module.exports = function webRoutes(router) {
     if (productId) {
       await db.collection("products").deleteOne({ _id: productId });
     }
-    return res.redirect("/admin/products");
+    return res.redirect("/admin/products?success=Product+deleted+successfully");
   });
 
   router.get("/admin/orders", ensureAuth, ensureAdmin, async (_req, res) => {
     const db = getDb();
-    const [orders, users] = await Promise.all([
+    const [orders, users, products, categories] = await Promise.all([
       db.collection("orders").find({}).sort({ created_at: -1 }).toArray(),
-      db.collection("users").find({}, { projection: { password: 0 } }).toArray()
+      db.collection("users").find({}, { projection: { password: 0 } }).toArray(),
+      db.collection("products").find({}).toArray(),
+      db.collection("categories").find({}).toArray()
     ]);
 
     const userMap = new Map(users.map((item) => [item._id.toString(), normalizeId(item)]));
+    const productMap = new Map(products.map((item) => [item._id.toString(), normalizeId(item)]));
+    const categoryMap = new Map(categories.map((item) => [item._id.toString(), normalizeId(item)]));
+
     const resolvedOrders = orders.map((item) =>
       normalizeId({
         ...item,
-        user: item.user_id ? userMap.get(item.user_id.toString()) : null
+        user: item.user_id ? userMap.get(item.user_id.toString()) : null,
+        product: item.product_id ? productMap.get(item.product_id.toString()) : null,
+        category: item.category_id ? categoryMap.get(item.category_id.toString()) : null
       })
     );
 
@@ -478,6 +1505,30 @@ module.exports = function webRoutes(router) {
     });
   });
 
+  // ── Admin Orders JSON API (for real-time polling) ─────────────────────────
+  router.get("/admin/api/orders", ensureAuth, ensureAdmin, async (_req, res) => {
+    const db = getDb();
+    const [orders, users, products, categories] = await Promise.all([
+      db.collection("orders").find({}).sort({ created_at: -1 }).toArray(),
+      db.collection("users").find({}, { projection: { password: 0 } }).toArray(),
+      db.collection("products").find({}).toArray(),
+      db.collection("categories").find({}).toArray()
+    ]);
+    const userMap = new Map(users.map((u) => [u._id.toString(), normalizeId(u)]));
+    const productMap = new Map(products.map((p) => [p._id.toString(), normalizeId(p)]));
+    const categoryMap = new Map(categories.map((c) => [c._id.toString(), normalizeId(c)]));
+
+    const resolvedOrders = orders.map((item) =>
+      normalizeId({
+        ...item,
+        user: item.user_id ? userMap.get(item.user_id.toString()) : null,
+        product: item.product_id ? productMap.get(item.product_id.toString()) : null,
+        category: item.category_id ? categoryMap.get(item.category_id.toString()) : null
+      })
+    );
+    return res.json({ ok: true, orders: resolvedOrders });
+  });
+
   router.post("/admin/orders/:id/status", ensureAuth, ensureAdmin, async (req, res) => {
     const db = getDb();
     const orderId = toObjectId(req.params.id);
@@ -485,9 +1536,68 @@ module.exports = function webRoutes(router) {
     const nextStatus = allowedStatuses.includes(req.body.status) ? req.body.status : "pending";
 
     if (orderId) {
-      await db.collection("orders").updateOne({ _id: orderId }, { $set: { status: nextStatus } });
+      await db.collection("orders").updateOne(
+        { _id: orderId },
+        {
+          $set: {
+            status: nextStatus,
+            payment_status: nextStatus,
+            paid_at: nextStatus === "paid" ? new Date() : null,
+            updated_at: new Date()
+          }
+        }
+      );
     }
     return res.redirect("/admin/orders");
+  });
+
+  router.get("/admin/users", ensureAuth, ensureAdmin, async (_req, res) => {
+    try {
+      const db = getDb();
+      const users = await db.collection("users").find({}).sort({ created_at: -1 }).toArray();
+      return res.render("admin/users", {
+        title: "Manage Users",
+        users: users.map(normalizeId)
+      });
+    } catch (error) {
+      console.error("Admin Users Error:", error);
+      return res.redirect("/admin");
+    }
+  });
+
+  router.post("/admin/users/:id/role", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const db = getDb();
+      const userId = toObjectId(req.params.id);
+      const newRole = req.body.role === "admin" ? "admin" : "user";
+      
+      if (userId) {
+        await db.collection("users").updateOne(
+          { _id: userId },
+          { $set: { role: newRole, updated_at: new Date() } }
+        );
+      }
+      return res.redirect("/admin/users?success=Role+updated");
+    } catch (error) {
+      return res.redirect("/admin/users?error=Update+failed");
+    }
+  });
+
+  router.delete("/admin/users/:id", ensureAuth, ensureAdmin, async (req, res) => {
+    try {
+      const db = getDb();
+      const userId = toObjectId(req.params.id);
+      if (userId) {
+        // Prevent deleting yourself
+        if (userId.toString() === _req.session.user.id) {
+           return res.redirect("/admin/users?error=Cannot+delete+yourself");
+        }
+        await db.collection("users").deleteOne({ _id: userId });
+      }
+      return res.redirect("/admin/users?success=User+deleted");
+    } catch (error) {
+      return res.redirect("/admin/users?error=Delete+failed");
+    }
   });
 
   return router;

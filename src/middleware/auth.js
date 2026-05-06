@@ -1,7 +1,14 @@
 const jwt = require("jsonwebtoken");
 
+function isApiRequest(req) {
+  return req.originalUrl.startsWith("/api/") || req.originalUrl.startsWith("/admin/api/");
+}
+
 function ensureAuth(req, res, next) {
   if (!req.session.user) {
+    if (isApiRequest(req)) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
     return res.redirect("/login");
   }
   return next();
@@ -9,6 +16,9 @@ function ensureAuth(req, res, next) {
 
 function ensureAdmin(req, res, next) {
   if (!req.session.user || req.session.user.role !== "admin") {
+    if (isApiRequest(req)) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
     return res.status(403).render("error", {
       title: "Forbidden",
       message: "Admin access required"

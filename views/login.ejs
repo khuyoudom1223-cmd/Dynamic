@@ -1,18 +1,32 @@
 <%- include('partials/head', { title }) %>
 <%- include('partials/navbar') %>
 
-<main class="shell section small-shell">
-  <div class="card">
-    <h1>Login</h1>
-    <% if (errors.length) { %>
-      <div class="alert"><%= errors.join(', ') %></div>
+<main class="shell section" style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
+  <div class="card" style="width: 100%; max-width: 400px; padding: 2.5rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+    <h1 style="margin-bottom: 1.5rem; font-size: 1.8rem; color: #111827;">Welcome Back</h1>
+    <p style="color: #6b7280; margin-bottom: 2rem;">Log in to your account to continue</p>
+    
+    <% if (errors && errors.length) { %>
+      <div class="alert" style="background: #fee2e2; color: #b91c1c; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+        <%= errors.join(', ') %>
+      </div>
     <% } %>
 
-    <form action="/login" method="post" class="grid-form">
-      <label>Email <input type="email" name="email" required /></label>
-      <label>Password <input type="password" name="password" required /></label>
-      <button class="btn" type="submit">Login</button>
+    <form action="/login" method="post" class="grid-form" style="text-align: left;">
+      <div style="margin-bottom: 1.2rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Email</label>
+        <input type="email" name="email" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;" placeholder="you@example.com" />
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151;">Password</label>
+        <input type="password" name="password" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;" placeholder="••••••••" />
+      </div>
+      <button class="btn" type="submit" style="width: 100%; padding: 0.8rem; font-size: 1rem; background: #3b82f6;">Sign In</button>
     </form>
+    
+    <p style="margin-top: 2rem; color: #6b7280; font-size: 0.95rem;">
+      Don't have an account? <a href="/register" style="color: #3b82f6; font-weight: 500; text-decoration: none;">Create one</a>
+    </p>
   </div>
 </main>
 

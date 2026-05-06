@@ -1,0 +1,262 @@
+<!-- Cart Backdrop Overlay -->
+<div id="cart-backdrop" onclick="closeCart()" 
+  style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px); z-index: 999; opacity: 0; transition: opacity 0.3s ease;">
+</div>
+
+<!-- Bottom Sheet Cart -->
+<div id="floating-cart" 
+  style="display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); transform: translateY(100%);">
+  
+  <div style="background: var(--surface); border-radius: 24px 24px 0 0; box-shadow: var(--shadow-premium); width: 100%; max-width: 600px; margin: 0 auto; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh; border: 1px solid var(--line); border-bottom: none;">
+    
+    <!-- Drag Handle Indicator -->
+    <div onclick="closeCart()" style="width: 100%; padding: 12px 0; display: flex; justify-content: center; cursor: pointer;">
+      <div style="width: 40px; height: 4px; background: var(--line); border-radius: 2px;"></div>
+    </div>
+
+    <!-- Header -->
+    <div style="padding: 0 1.5rem 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 44px; height: 44px; background: var(--brand-soft); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">🛒</div>
+        <div>
+          <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text); letter-spacing: -0.01em;">Your Selection</h3>
+          <p id="cart-count-label" style="margin: 0; font-size: 0.75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">0 items selected</p>
+        </div>
+      </div>
+      <button onclick="closeCart()" style="width: 36px; height: 36px; border-radius: 50%; background: var(--bg); border: 1px solid var(--line); color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <!-- Items List -->
+    <div id="cart-items" style="flex-grow: 1; overflow-y: auto; padding: 1.25rem; background: var(--surface);">
+      <!-- Items injected here -->
+    </div>
+
+    <!-- Sticky Footer -->
+    <div style="padding: 1.5rem; background: var(--bg); border-top: 1px solid var(--line);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+          <span style="color: var(--muted); font-weight: 700; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.1em; display: block; margin-bottom: 4px;">Total Amount</span>
+          <span id="cart-total" style="font-size: 2rem; font-weight: 900; color: var(--text); letter-spacing: -0.03em;">$0.00</span>
+        </div>
+        <div style="text-align: right; color: var(--success); font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; gap: 6px; background: color-mix(in srgb, var(--success) 10%, transparent); padding: 6px 12px; border-radius: 999px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Secure
+        </div>
+      </div>
+      
+      <button id="checkout-btn" onclick="checkoutCart()"
+        style="width: 100%; background: var(--brand); color: white; border: none; font-weight: 800; padding: 1.25rem; border-radius: var(--radius); cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 1.05rem; box-shadow: 0 8px 24px color-mix(in srgb, var(--brand) 25%, transparent);">
+        <span>Complete Purchase</span>
+        <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  #checkout-btn:active { transform: scale(0.98) translateY(2px); }
+  #checkout-btn:hover { opacity: 0.95; transform: translateY(-1px); }
+  
+  .cart-item-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    background: var(--surface);
+    border-radius: 18px;
+    margin-bottom: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    user-select: none;
+    touch-action: pan-x;
+    border: 1px solid var(--line);
+  }
+  
+  .cart-item-row:hover {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+  }
+
+  .qty-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 800;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .qty-btn:hover { border-color: var(--brand); color: var(--brand); }
+  .qty-btn:active { background: var(--bg); transform: scale(0.9); }
+</style>
+
+<script>
+  let cart = JSON.parse(localStorage.getItem('book_cart') || '[]');
+  
+  function openCart() {
+    const backdrop = document.getElementById('cart-backdrop');
+    const sheet = document.getElementById('floating-cart');
+    backdrop.style.display = 'block';
+    sheet.style.display = 'block';
+    setTimeout(() => {
+      backdrop.style.opacity = '1';
+      sheet.style.transform = 'translateY(0)';
+    }, 10);
+  }
+
+  function closeCart() {
+    const backdrop = document.getElementById('cart-backdrop');
+    const sheet = document.getElementById('floating-cart');
+    backdrop.style.opacity = '0';
+    sheet.style.transform = 'translateY(100%)';
+    setTimeout(() => {
+      backdrop.style.display = 'none';
+      sheet.style.display = 'none';
+    }, 300);
+  }
+
+  function updateCartUI() {
+    const itemsEl = document.getElementById('cart-items');
+    const totalEl = document.getElementById('cart-total');
+    const countEl = document.getElementById('cart-count-label');
+
+    if (cart.length === 0) {
+      countEl.innerText = "0 items selected";
+      itemsEl.innerHTML = '<div style="text-align: center; padding: 3rem 1rem; color: #9ca3af;"><div style="font-size: 3rem; margin-bottom: 1rem;">🛍️</div><p style="font-weight: 600;">Your cart is empty</p></div>';
+      totalEl.innerText = "$0.00";
+      // Don't auto-close if it was already open, but allow it to be empty
+      return;
+    }
+
+    countEl.innerText = `${cart.length} item${cart.length !== 1 ? 's' : ''} selected`;
+
+    itemsEl.innerHTML = cart.map((item, index) => `
+      <div class="cart-item-row" id="cart-item-${index}">
+        <div style="width: 64px; height: 64px; border-radius: 12px; overflow: hidden; background: #f3f4f6; flex-shrink: 0; border: 1px solid #f3f4f6;">
+          <img src="${item.image || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=120'}" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+        <div style="flex-grow: 1; min-width: 0;">
+          <div style="font-weight: 700; color: #111827; font-size: 0.95rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
+          <div style="color: #6b7280; font-size: 0.85rem; font-weight: 700;">$${parseFloat(item.price).toFixed(2)}</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 14px; background: #f9fafb; padding: 6px; border-radius: 14px; border: 1px solid #f3f4f6;">
+          <button class="qty-btn" onclick="updateQty(${index}, -1)">-</button>
+          <span style="font-weight: 900; color: #111827; min-width: 24px; text-align: center; font-size: 1.1rem;">${item.qty}</span>
+          <button class="qty-btn" onclick="updateQty(${index}, 1)">+</button>
+        </div>
+      </div>
+    `).join('');
+
+    const total = cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.qty), 0);
+    totalEl.innerText = '$' + total.toFixed(2);
+  }
+
+  function updateQty(index, delta) {
+    cart[index].qty += delta;
+    if (cart[index].qty < 1) {
+      cart.splice(index, 1);
+    }
+    saveCart();
+    updateCartUI();
+  }
+
+  function addToCart(productId, categoryId, name, price, qty, event, image) {
+    const qtyVal = parseInt(qty) || 1;
+    const existingIndex = cart.findIndex(item => item.productId === productId);
+
+    if (existingIndex > -1) {
+      cart[existingIndex].qty += qtyVal;
+    } else {
+      cart.push({ productId, categoryId, name, price, qty: qtyVal, image });
+    }
+
+    saveCart();
+    updateCartUI();
+    openCart();
+
+    if (event && event.currentTarget) {
+      const btn = event.currentTarget;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span>Added! ✓</span>';
+      btn.style.background = '#059669';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = '#2563eb';
+      }, 1500);
+    }
+  }
+
+  function saveCart() {
+    localStorage.setItem('book_cart', JSON.stringify(cart));
+  }
+
+  async function checkoutCart() {
+    if (cart.length === 0) return;
+    const btn = document.getElementById('checkout-btn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span>Processing...</span>';
+    btn.disabled = true;
+
+    try {
+      const response = await fetch('/orders/checkout-cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: cart })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.removeItem('book_cart');
+        cart = [];
+        if (data.telegramUrl) {
+          window.location.href = data.telegramUrl;
+        } else {
+          window.location.href = '/orders/my?success=true';
+        }
+      } else {
+        const err = await response.json();
+        alert('Checkout failed: ' + (err.message || 'Unknown error'));
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+      }
+    } catch (e) {
+      alert('Network error. Please try again.');
+      btn.innerHTML = originalContent;
+      btn.disabled = false;
+    }
+  }
+
+  // Swipe to Remove Implementation
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => {
+    if (e.target.closest('.cart-item-row')) touchStartX = e.touches[0].clientX;
+  }, {passive: true});
+
+  document.addEventListener('touchend', e => {
+    const row = e.target.closest('.cart-item-row');
+    if (!row) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    
+    if (diff > 120) { // Swipe left threshold
+      const index = parseInt(row.id.split('-').pop());
+      row.style.transform = 'translateX(-120%)';
+      row.style.opacity = '0';
+      setTimeout(() => {
+        cart.splice(index, 1);
+        saveCart();
+        updateCartUI();
+      }, 300);
+    }
+  }, {passive: true});
+
+  document.addEventListener('DOMContentLoaded', updateCartUI);
+</script>

@@ -1,67 +1,65 @@
-const menuToggle = document.querySelector("[data-menu-toggle]");
-const nav = document.getElementById("main-nav");
-const menuBackdrop = document.querySelector("[data-menu-backdrop]");
-const themeToggles = document.querySelectorAll("[data-theme-toggle]");
+// Navigation & Menu Logic
+const menuTrigger = document.getElementById("menu-trigger");
+const mainNav = document.getElementById("main-nav-links");
+const menuBackdrop = document.getElementById("menu-backdrop");
 
-function closeMenu() {
-  if (!nav) return;
-  nav.classList.remove("is-open");
-  if (menuBackdrop) {
-    menuBackdrop.classList.remove("is-open");
-  }
-  document.body.style.overflow = "";
+function toggleMenu() {
+  if (!mainNav || !menuBackdrop) return;
+  const isOpen = mainNav.classList.toggle("is-open");
+  menuBackdrop.classList.toggle("is-open");
+  document.body.style.overflow = isOpen ? "hidden" : "";
 }
 
-function openMenu() {
-  if (!nav) return;
-  nav.classList.add("is-open");
-  if (menuBackdrop) {
-    menuBackdrop.classList.add("is-open");
-  }
-  document.body.style.overflow = "hidden";
-}
-
-if (menuToggle && nav) {
-  menuToggle.addEventListener("click", () => {
-    if (nav.classList.contains("is-open")) {
-      closeMenu();
-    } else {
-      openMenu();
-    }
-  });
-
-  nav.querySelectorAll("a").forEach((item) => {
-    item.addEventListener("click", () => {
-      closeMenu();
-    });
-  });
+if (menuTrigger) {
+  menuTrigger.addEventListener("click", toggleMenu);
 }
 
 if (menuBackdrop) {
-  menuBackdrop.addEventListener("click", () => {
-    closeMenu();
-  });
+  menuBackdrop.addEventListener("click", toggleMenu);
 }
 
-window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    closeMenu();
-  }
+// Close menu on link click
+document.querySelectorAll(".main-nav a").forEach(link => {
+  link.addEventListener("click", () => {
+    if (mainNav && mainNav.classList.contains("is-open")) {
+      toggleMenu();
+    }
+  });
 });
 
-if (themeToggles.length > 0) {
-  const savedTheme = localStorage.getItem("theme") || "dark";
-  document.documentElement.setAttribute("data-theme", savedTheme);
+// Theme Toggling logic (also used by inline scripts)
+window.toggleTheme = function() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const target = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', target);
+  localStorage.setItem('theme', target);
+};
 
-  themeToggles.forEach((themeToggle) => {
-    themeToggle.addEventListener("click", () => {
-      const nextTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", nextTheme);
-      localStorage.setItem("theme", nextTheme);
-    });
+// Set initial theme if not already set by inline script
+if (!document.documentElement.getAttribute('data-theme')) {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+// Active Link Highlighting
+function highlightActiveLinks() {
+  const currentPath = window.location.pathname;
+  const navLinks = document.querySelectorAll('.main-nav a, .mobile-nav-item, .footer-nav a');
+  
+  navLinks.forEach(link => {
+    const linkPath = link.getAttribute('href');
+    if (linkPath === currentPath) {
+      link.classList.add('is-active');
+    } else {
+      link.classList.remove('is-active');
+    }
   });
 }
 
+highlightActiveLinks();
+
+// Chart Logic
 const chartCanvas = document.getElementById("ordersChart");
 if (chartCanvas && window.Chart) {
   const source = chartCanvas.getAttribute("data-chart");
@@ -76,40 +74,73 @@ if (chartCanvas && window.Chart) {
       datasets: [
         {
           data: values,
-          backgroundColor: ["#0f766e", "#16a34a", "#f97316"]
+          backgroundColor: ["#0f766e", "#16a34a", "#f97316"],
+          borderWidth: 0
         }
       ]
     },
     options: {
       responsive: true,
+      cutout: '70%',
       plugins: {
         legend: {
-          position: "bottom"
+          position: "bottom",
+          labels: {
+            usePointStyle: true,
+            padding: 20
+          }
         }
       }
     }
   });
 }
 
-const addProductForm = document.querySelector("[data-add-product-form]");
-if (addProductForm) {
-  const formError = addProductForm.querySelector("[data-form-error]");
-  const titleInput = addProductForm.querySelector("input[name='title']");
+// Status Helpers
+const statusSelects = document.querySelectorAll("[data-status-select]");
+if (statusSelects.length > 0) {
+  const allowedStatuses = ["pending", "paid", "cancelled"];
 
-  addProductForm.addEventListener("submit", (event) => {
-    if (!titleInput || titleInput.value.trim()) {
-      if (formError) {
-        formError.hidden = true;
-        formError.textContent = "";
-      }
-      return;
-    }
+  const updateStatusSelectClass = (selectElement) => {
+    const nextStatus = String(selectElement.value || "").toLowerCase();
+    allowedStatuses.forEach((status) => {
+      selectElement.classList.remove(`status-select-${status}`);
+    });
 
-    event.preventDefault();
-    if (formError) {
-      formError.textContent = "Title is required.";
-      formError.hidden = false;
+    if (allowedStatuses.includes(nextStatus)) {
+      selectElement.classList.add(`status-select-${nextStatus}`);
     }
-    titleInput.focus();
+  };
+
+  statusSelects.forEach((selectElement) => {
+    updateStatusSelectClass(selectElement);
+    selectElement.addEventListener("change", () => updateStatusSelectClass(selectElement));
   });
 }
+
+// Scroll Progress Bar Logic
+const progressBar = document.createElement('div');
+progressBar.className = 'scroll-progress-container';
+progressBar.innerHTML = '<div class="scroll-progress-bar" id="scroll-bar"></div>';
+document.body.prepend(progressBar);
+
+window.addEventListener('scroll', () => {
+  const scrollBar = document.getElementById('scroll-bar');
+  const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+  const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  const scrolled = (winScroll / height) * 100;
+  if (scrollBar) scrollBar.style.width = scrolled + "%";
+});
+
+// Reveal on Scroll Logic
+const revealElements = document.querySelectorAll('.card, .recommended-card, .section-head, .hero-content');
+revealElements.forEach(el => el.classList.add('reveal'));
+
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('active');
+    }
+  });
+}, { threshold: 0.1 });
+
+revealElements.forEach(el => revealObserver.observe(el));

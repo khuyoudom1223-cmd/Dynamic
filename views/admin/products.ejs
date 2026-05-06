@@ -1,99 +1,1124 @@
 <%- include('../partials/head', { title }) %>
-<%- include('../partials/navbar') %>
 
-<main class="shell section">
-  <div class="section-head">
-    <h1>Manage Products</h1>
-    <a href="/admin" class="btn-inline">Back to Dashboard</a>
-  </div>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <% if (uploadError) { %>
-    <div class="alert"><%= uploadError %></div>
-  <% } %>
+  <div id="admin-products-root"></div>
 
-  <section class="card">
-    <h2>Add Product</h2>
-    <form method="post" action="/admin/products" enctype="multipart/form-data" class="grid-form add-product-form" data-add-product-form novalidate>
-      <div class="form-error" data-form-error hidden></div>
-      <label>Title <input type="text" name="title" required /></label>
-      <label>Description <textarea name="description" rows="3"></textarea></label>
-      <label>Price <input type="number" name="price" step="0.01" min="0" placeholder="Enter price (optional)" /></label>
-      <label>Category
-        <select name="category_id" required>
-          <% categories.forEach((category) => { %>
-            <option value="<%= category.id %>"><%= category.name %></option>
-          <% }) %>
-        </select>
-      </label>
-      <label>Image <input type="file" name="image" accept="image/*" /></label>
-      <label>Video <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" /></label>
-      <button class="btn" type="submit">Create Product</button>
-    </form>
-  </section>
+  <script type="text/babel">
+    const { useEffect, useMemo, useState } = React;
+    const STORAGE_MODE = '<%= storageMode || "Local" %>';
+    const STORAGE_REQUESTED_MODE = '<%= storageRequestedMode || storageMode || "Local" %>';
+    const STORAGE_WARNING = '<%= storageWarning || "" %>';
 
-  <section class="card table-wrap mt-20">
-    <h2>Product List</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Image</th>
-          <th>Video</th>
-          <th>Title</th>
-          <th>Price</th>
-          <th>Category</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% products.forEach((product) => { %>
-          <tr>
-            <td><%= product.id %></td>
-            <td>
-              <% if (product.image) { %>
-                <img src="<%= product.image %>" alt="<%= product.title %>" class="thumb" />
-              <% } else { %>
-                -
-              <% } %>
-            </td>
-            <td>
-              <% if (product.video) { %>
-                <video class="thumb" controls preload="metadata">
-                  <source src="<%= product.video %>" type="video/mp4" />
-                </video>
-              <% } else { %>
-                -
-              <% } %>
-            </td>
-            <td><%= product.title %></td>
-            <td><%= product.price === null || product.price === undefined ? '-' : `$${Number(product.price).toFixed(2)}` %></td>
-            <td><%= product.category ? product.category.name : '-' %></td>
-            <td>
-              <details>
-                <summary>Edit</summary>
-                <form method="post" action="/admin/products/<%= product.id %>?_method=PUT" enctype="multipart/form-data" class="grid-form mt-10">
-                  <input type="text" name="title" value="<%= product.title %>" required />
-                  <textarea name="description" rows="3"><%= product.description || "" %></textarea>
-                  <input type="number" name="price" value="<%= product.price === null || product.price === undefined ? '' : Number(product.price) %>" step="0.01" min="0" placeholder="Enter price (optional)" />
-                  <select name="category_id" required>
-                    <% categories.forEach((category) => { %>
-                      <option value="<%= category.id %>" <%= String(product.category_id) === String(category.id) ? 'selected' : '' %>><%= category.name %></option>
-                    <% }) %>
+    function formatPrice(value) {
+      const n = Number(value || 0);
+      return `$${n.toFixed(2)}`;
+    }
+
+    async function parseApiResponse(response, fallbackMessage) {
+      const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+      if (!contentType.includes('application/json')) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Your session has expired or you no longer have admin access. Please sign in again.');
+        }
+
+        // Try to include a short preview of the response body to help debugging.
+        let textPreview = '';
+        try {
+          const text = await response.text();
+          textPreview = String(text || '').trim().replace(/\s+/g, ' ').slice(0, 500);
+        } catch (_e) {
+          textPreview = '';
+        }
+
+        const extra = textPreview ? `: ${textPreview}` : '';
+        throw new Error(`${fallbackMessage} (server returned a non-JSON response)${extra}`);
+      }
+
+      try {
+        return await response.json();
+      } catch (_error) {
+        // If JSON parsing fails, attempt to capture raw text for debugging.
+        try {
+          const text = await response.text();
+          const preview = String(text || '').trim().replace(/\s+/g, ' ').slice(0, 500);
+          throw new Error(`${fallbackMessage} (invalid JSON response): ${preview}`);
+        } catch (_e) {
+          throw new Error(`${fallbackMessage} (invalid JSON response)`);
+        }
+      }
+    }
+
+    function DashboardSidebar() {
+      const navItems = [
+        { href: '/admin', label: 'Dashboard' },
+        { href: '/admin/users', label: 'Users' },
+        { href: '/admin/categories', label: 'Categories' },
+        { href: '/admin/products', label: 'Products', active: true },
+        { href: '/admin/orders', label: 'Orders' }
+      ];
+
+      return (
+        <aside className="w-full lg:w-64 shrink-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Admin Panel</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-900">Product Manager</h2>
+          </div>
+          <nav className="p-3">
+            {navItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className={`mb-1 block rounded-xl px-3 py-2 text-sm font-medium transition ${item.active
+                  ? 'bg-indigo-600 text-white shadow'
+                  : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </aside>
+      );
+    }
+
+    function ProductModal({
+      isOpen,
+      mode,
+      categories,
+      form,
+      setForm,
+      imageFile,
+      setImageFile,
+      imagePreview,
+      setImagePreview,
+      videoFiles,
+      setVideoFiles,
+      pdfFile,
+      setPdfFile,
+      onClose,
+      onSubmit,
+      saving,
+      onCreateCategory,
+      creatingCategory,
+      uploadProgress
+    }) {
+      const [categoryName, setCategoryName] = useState('');
+      const [categoryFeedback, setCategoryFeedback] = useState('');
+      const hasVideos = (form.videos && form.videos.length > 0) || (videoFiles && videoFiles.length > 0);
+
+      const productType = form.type || 'course';
+
+      const filteredCategories = categories.filter(cat => {
+        // For legacy categories without type, treat as 'course'
+        const catType = cat.type || 'course';
+        return catType === productType;
+      });
+
+      // Handle existing selection that might be filtered out
+      const currentCategory = categories.find(c => String(c.id) === String(form.category_id));
+      const showAllCategories = mode === 'edit' && currentCategory && (currentCategory.type || 'course') !== productType;
+
+      const displayCategories = showAllCategories ? categories : filteredCategories;
+
+      const suggestionsByType = {
+        course: ['Reading', 'Speaking', 'Writing', 'Grammar', 'Listening', 'Vocabulary', 'General English'],
+        resource: ['E-Books', 'PDF Guides', 'Audio Files', 'Practice Sheets'],
+        ielts: ['IELTS Academic', 'IELTS General', 'IELTS Vocabulary', 'IELTS Mock Test'],
+        level_test: ['Beginner Test', 'Intermediate Test', 'Advanced Test', 'Placement Test'],
+        book: ['Fiction', 'Non-Fiction', 'Academic', 'Children', 'Reference']
+      };
+
+      const suggestedCategoryNames = suggestionsByType[productType] || suggestionsByType.course;
+
+      const onImageChange = (event) => {
+        const file = event.target.files?.[0] || null;
+        setImageFile(file);
+        if (file) {
+          setImagePreview(URL.createObjectURL(file));
+        } else {
+          setImagePreview(form.image || '');
+        }
+      };
+
+      const onVideoChange = (event) => {
+        const files = Array.from(event.target.files || []);
+        setVideoFiles((prev) => [...prev, ...files]);
+      };
+
+      const removeNewVideo = (index) => {
+        setVideoFiles((prev) => prev.filter((_, i) => i !== index));
+      };
+
+      const removeExistingVideo = (index) => {
+        const updatedVideos = [...(form.videos || [])];
+        const videoToDelete = updatedVideos[index];
+
+        setForm({
+          ...form,
+          videos: updatedVideos.filter((_, i) => i !== index),
+          delete_video_indices: [...(form.delete_video_indices || []), index]
+        });
+      };
+
+      const createCategory = async (nameOverride = '') => {
+        const nextName = (nameOverride || categoryName).trim();
+        if (!nextName) {
+          setCategoryFeedback('Enter a category name first.');
+          return;
+        }
+
+        setCategoryFeedback('');
+        // Pass the current product type to the new category
+        const category = await onCreateCategory(nextName, productType);
+        if (category?.id) {
+          setForm({ ...form, category_id: category.id });
+          setCategoryName('');
+          setCategoryFeedback(`Selected category: ${category.name}`);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+              <h3 className="text-xl font-semibold text-slate-900">
+                {mode === 'edit' ? (form.type === 'book' ? 'Edit Book' : 'Edit Product') : (form.type === 'book' ? 'Add Book' : 'Add Product')}
+              </h3>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+              >
+                Close
+              </button>
+            </div>
+
+            <form
+              className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                onSubmit();
+              }}
+            >
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">Product name</label>
+                <input
+                  required
+                  type="text"
+                  value={form.name}
+                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-indigo-500 focus:ring"
+                  placeholder="Enter product name"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Category {form.type === 'book' && <span className="text-slate-400 font-normal">(Optional)</span>}
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    required={form.type !== 'book'}
+                    value={form.category_id}
+                    onChange={(event) => setForm({ ...form, category_id: event.target.value })}
+                    className="flex-grow rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-indigo-500 focus:ring"
+                  >
+                    <option value="">Select a Category</option>
+                    {displayCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name} {cat.price > 0 ? `($${cat.price})` : '(Free)'}
+                      </option>
+                    ))}
                   </select>
-                  <input type="file" name="image" accept="image/*" />
-                  <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime" />
-                  <button class="btn-inline" type="submit">Save</button>
-                </form>
-              </details>
-              <form method="post" action="/admin/products/<%= product.id %>?_method=DELETE" onsubmit="return confirm('Delete this product?')" class="mt-10">
-                <button class="ghost-btn" type="submit">Delete</button>
-              </form>
-            </td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </section>
-</main>
+                  <a
+                    href="/admin/categories"
+                    className="flex items-center gap-1 rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+                    title="Manage prices and names"
+                  >
+                    Edit Prices
+                  </a>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-500 italic">
+                  Subscription prices are set at the category level, not per video.
+                </p>
+              </div>
 
-<%- include('../partials/footer') %>
+              <div className="md:col-span-2 mt-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-2.5">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={categoryName}
+                    onChange={(event) => setCategoryName(event.target.value)}
+                    placeholder="Add new category"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs outline-none ring-indigo-500 focus:ring"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => createCategory()}
+                    disabled={creatingCategory}
+                    className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {creatingCategory ? 'Adding...' : 'Add Category'}
+                  </button>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {suggestedCategoryNames.map((name) => (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => createCategory(name)}
+                      disabled={creatingCategory}
+                      className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+                {categoryFeedback ? (
+                  <p className="mt-2 text-xs text-emerald-700">{categoryFeedback}</p>
+                ) : null}
+                <a
+                  href="/admin/categories"
+                  className="mt-2 inline-block text-xs font-semibold text-indigo-700 hover:text-indigo-800"
+                >
+                  Manage all categories
+                </a>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+                <select
+                  value={form.status}
+                  onChange={(event) => setForm({ ...form, status: event.target.value })}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-indigo-500 focus:ring"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Hidden">Hidden</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Product Type</label>
+                <select
+                  value={form.type || 'course'}
+                  onChange={(event) => {
+                    const newType = event.target.value;
+                    const updates = { type: newType };
+                    if (newType === 'resource') {
+                      updates.price = '0';
+                    }
+                    setForm({ ...form, ...updates });
+                  }}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-indigo-500 focus:ring"
+                >
+                  <option value="course">Online Course</option>
+                  <option value="resource">Free Resource</option>
+                  <option value="book">Book</option>
+                  <option value="ielts">IELTS Preparation</option>
+                  <option value="level_test">Level Test</option>
+                </select>
+              </div>
+
+              {!['course', 'book', 'resource', 'ielts', 'level_test'].includes(form.type) && !hasVideos && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Stock quantity
+                  </label>
+                  <input
+                    required
+                    min="0"
+                    step="1"
+                    type="number"
+                    value={form.stock}
+                    onChange={(event) => setForm({ ...form, stock: event.target.value })}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-indigo-500 focus:ring"
+                    placeholder="0"
+                  />
+                </div>
+              )}
+
+              {form.type === 'book' && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Price ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required={form.type === 'book'}
+                    value={form.price}
+                    onChange={(event) => setForm({ ...form, price: event.target.value })}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-indigo-500 focus:ring"
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
+
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
+                <textarea
+                  rows="4"
+                  value={form.description}
+                  onChange={(event) => setForm({ ...form, description: event.target.value })}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none ring-indigo-500 focus:ring"
+                  placeholder="Product description"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Product image</label>
+                <input type="file" accept="image/*" onChange={onImageChange} className="block w-full text-sm" />
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Image preview" className="mt-2 h-24 w-24 rounded-lg border border-slate-200 object-cover" />
+                ) : (
+                  <p className="mt-2 text-xs text-slate-500">No image selected</p>
+                )}
+              </div>
+
+              {form.type === 'book' && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Book File (PDF)</label>
+                  <input 
+                    type="file" 
+                    accept=".pdf" 
+                    onChange={(e) => setPdfFile(e.target.files?.[0] || null)} 
+                    className="block w-full text-sm" 
+                  />
+                  {pdfFile ? (
+                    <p className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                      {pdfFile.name}
+                    </p>
+                  ) : form.pdf_file ? (
+                    <p className="mt-2 text-xs text-slate-500 flex items-center gap-1">
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                      Current: {form.pdf_file.split('/').pop()}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-400 italic">Optional: Upload a PDF version</p>
+                  )}
+                </div>
+              )}
+
+              {form.type !== 'book' && (
+                <div className="md:col-span-2 space-y-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h4 className="mb-3 text-sm font-semibold text-slate-900">Course Content (Videos)</h4>
+
+                    {/* Existing Videos */}
+                    <div className="space-y-2 mb-4">
+                      {(form.videos || []).map((v, i) => (
+                        <div key={i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-slate-100 text-xs font-bold text-slate-500">
+                              {i + 1}
+                            </div>
+                            <span className="truncate text-xs text-slate-600">{v.split('/').pop()}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeExistingVideo(i)}
+                            className="rounded p-1 text-rose-500 hover:bg-rose-50"
+                            title="Remove video"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Newly Selected Videos */}
+                      {videoFiles.map((f, i) => (
+                        <div key={i} className="flex items-center justify-between rounded-lg border border-indigo-100 bg-indigo-50/30 p-2">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-indigo-100 text-xs font-bold text-indigo-600">
+                              New
+                            </div>
+                            <span className="truncate text-xs text-indigo-700">{f.name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeNewVideo(i)}
+                            className="rounded p-1 text-rose-500 hover:bg-rose-50"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+
+                      {(!form.videos?.length && !videoFiles.length) && (
+                        <p className="text-center py-4 text-xs text-slate-400 italic">No videos added to this course yet.</p>
+                      )}
+                    </div>
+
+                    <label className="block text-xs font-semibold text-slate-600 mb-1 uppercase tracking-wider">Upload New Videos</label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        multiple
+                        onChange={onVideoChange}
+                        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                      />
+                      <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white py-6 transition-colors hover:border-indigo-400">
+                        <div className="text-center">
+                          <svg className="mx-auto h-8 w-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <p className="mt-1 text-sm font-medium text-indigo-600">Click to add videos</p>
+                          <p className="text-[11px] text-slate-400">MP4, MOV up to 1GB per file</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="md:col-span-2 flex justify-between items-center gap-3 pt-2">
+                {uploadProgress > 0 && saving ? (
+                  <div className="flex-1 mr-4">
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                      <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">{uploadProgress}% uploaded</p>
+                  </div>
+                ) : (
+                  <div className="flex-1"></div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={saving}
+                    type="submit"
+                    className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {saving ? 'Saving...' : mode === 'edit' ? 'Update Product' : 'Save Product'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function AdminProductsApp() {
+      const [products, setProducts] = useState([]);
+      const [categories, setCategories] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [saving, setSaving] = useState(false);
+      const [message, setMessage] = useState('');
+      const [error, setError] = useState('<%= uploadError || "" %>');
+      const [checkingStorage, setCheckingStorage] = useState(false);
+      const [storageHealth, setStorageHealth] = useState(null);
+      const [search, setSearch] = useState('');
+      const [statusFilter, setStatusFilter] = useState('');
+      const [categoryFilter, setCategoryFilter] = useState('');
+      const [typeFilter, setTypeFilter] = useState('');
+
+      const [modalOpen, setModalOpen] = useState(false);
+      const [mode, setMode] = useState('add');
+      const [editingId, setEditingId] = useState(null);
+      const [form, setForm] = useState({
+        name: '',
+        category_id: '',
+        price: '',
+        description: '',
+        stock: '',
+        status: 'Active',
+        image: '',
+        video: ''
+      });
+
+      const [imageFile, setImageFile] = useState(null);
+      const [pdfFile, setPdfFile] = useState(null);
+      const [videoFiles, setVideoFiles] = useState([]);
+      const [imagePreview, setImagePreview] = useState('');
+      const [creatingCategory, setCreatingCategory] = useState(false);
+      const [uploadProgress, setUploadProgress] = useState(0);
+
+      async function loadCategories() {
+        const response = await fetch('/admin/api/categories');
+        const data = await parseApiResponse(response, 'Failed to load categories');
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to load categories');
+        }
+        setCategories(data.categories || []);
+      }
+
+      function mergeCategoryList(current, nextCategory) {
+        const next = [...current];
+        const existingIndex = next.findIndex((item) => item.id === nextCategory.id);
+        if (existingIndex >= 0) {
+          next[existingIndex] = nextCategory;
+        } else {
+          next.push(nextCategory);
+        }
+        next.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+        return next;
+      }
+
+      async function loadProducts() {
+        const params = new URLSearchParams();
+        if (search.trim()) {
+          params.set('search', search.trim());
+        }
+        if (statusFilter) {
+          params.set('status', statusFilter);
+        }
+        if (categoryFilter) {
+          params.set('categoryId', categoryFilter);
+        }
+        if (typeFilter) {
+          params.set('type', typeFilter);
+        }
+
+        const query = params.toString();
+        const url = query ? `/admin/api/products?${query}` : '/admin/api/products';
+        const response = await fetch(url);
+        const data = await parseApiResponse(response, 'Failed to load products');
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to load products');
+        }
+
+        setProducts(data.products || []);
+      }
+
+      useEffect(() => {
+        let mounted = true;
+        (async () => {
+          try {
+            setLoading(true);
+            await Promise.all([loadCategories(), loadProducts()]);
+          } catch (err) {
+            if (mounted) {
+              setError(err.message || 'Unable to load product dashboard.');
+            }
+          } finally {
+            if (mounted) {
+              setLoading(false);
+            }
+          }
+        })();
+
+        return () => {
+          mounted = false;
+        };
+      }, []);
+
+      useEffect(() => {
+        testStorageConnection();
+      }, []);
+
+      useEffect(() => {
+        const timeout = setTimeout(() => {
+          loadProducts().catch((err) => setError(err.message || 'Failed to load products'));
+        }, 250);
+
+        return () => clearTimeout(timeout);
+      }, [search, statusFilter, categoryFilter, typeFilter]);
+
+      const totalProducts = useMemo(() => products.length, [products]);
+
+      function resetForm() {
+        setForm({
+          name: '',
+          category_id: '',
+          description: '',
+          stock: '',
+          status: 'Active',
+          type: 'course',
+          image: '',
+          video: ''
+        });
+        setImageFile(null);
+        setImagePreview('');
+        setPdfFile(null);
+        setVideoFiles([]);
+        setEditingId(null);
+        setUploadProgress(0);
+      }
+
+      function openAddModal() {
+        setMode('add');
+        resetForm();
+        setModalOpen(true);
+      }
+
+      function openAddBookModal() {
+        setMode('add');
+        resetForm();
+        setForm((prev) => ({ ...prev, type: 'book' }));
+        setModalOpen(true);
+      }
+
+      function openEditModal(product) {
+        setMode('edit');
+        setEditingId(product.id);
+        setForm({
+          name: product.name || product.title || '',
+          category_id: product.category_id || '',
+          description: product.description || '',
+          stock: product.stock ?? 0,
+          status: product.status || 'Active',
+          type: product.type || 'course',
+          price: product.price ?? '',
+          image: product.image || '',
+          pdf_file: product.pdf_file || '',
+          videos: product.videos || (product.video ? [product.video] : []),
+          delete_video_indices: []
+        });
+        setImagePreview(product.image || '');
+        setVideoFiles([]);
+        setEditingId(product.id);
+        setModalOpen(true);
+      }
+
+      async function handleSave() {
+        try {
+          setSaving(true);
+          setError('');
+          setMessage('');
+          setUploadProgress(0);
+
+          const body = new FormData();
+          body.append('name', form.name);
+          body.append('category_id', form.category_id);
+          body.append('description', form.description);
+          body.append('stock', form.stock);
+          body.append('status', form.status);
+          body.append('type', form.type || 'course');
+
+          if (form.type === 'book' && form.price !== '') {
+            body.append('price', form.price);
+          }
+
+          if (imageFile) {
+            body.append('image', imageFile);
+          }
+
+          if (pdfFile) {
+            body.append('pdf_file', pdfFile);
+          }
+
+          videoFiles.forEach((file) => {
+            body.append('video', file);
+          });
+
+          if (form.delete_video_indices && form.delete_video_indices.length > 0) {
+            body.append('delete_video_indices', JSON.stringify(form.delete_video_indices));
+          }
+
+          const endpoint = mode === 'edit'
+            ? `/admin/api/products/${editingId}`
+            : '/admin/api/products';
+          const method = mode === 'edit' ? 'PUT' : 'POST';
+
+          await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, endpoint);
+
+            xhr.upload.onprogress = (event) => {
+              if (event.lengthComputable) {
+                const percentComplete = Math.round((event.loaded / event.total) * 100);
+                setUploadProgress(percentComplete);
+              }
+            };
+
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                  const data = JSON.parse(xhr.responseText);
+                  resolve(data);
+                } catch (e) {
+                  reject(new Error('Invalid JSON response'));
+                }
+              } else {
+                try {
+                  const data = JSON.parse(xhr.responseText);
+                  reject(new Error(data.message || 'Failed to save product'));
+                } catch (e) {
+                  reject(new Error(`Failed to save product (Status ${xhr.status})`));
+                }
+              }
+            };
+
+            xhr.onerror = () => reject(new Error('Network error occurred during upload'));
+            xhr.send(body);
+          }).then(async (data) => {
+            setModalOpen(false);
+            resetForm();
+            setMessage(data.message || 'Saved successfully');
+            await loadProducts();
+          });
+
+        } catch (err) {
+          setError(err.message || 'Unable to save product');
+        } finally {
+          setSaving(false);
+          setUploadProgress(0);
+        }
+      }
+
+      async function handleDelete(productId) {
+        if (!window.confirm('Delete this product permanently?')) {
+          return;
+        }
+
+        try {
+          setError('');
+          setMessage('');
+
+          const response = await fetch(`/admin/api/products/${productId}`, {
+            method: 'DELETE'
+          });
+          const data = await parseApiResponse(response, 'Failed to delete product');
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Failed to delete product');
+          }
+
+          setMessage(data.message || 'Product deleted successfully');
+          await loadProducts();
+        } catch (err) {
+          setError(err.message || 'Unable to delete product');
+        }
+      }
+
+      async function testStorageConnection() {
+        try {
+          setCheckingStorage(true);
+          const response = await fetch('/admin/api/storage/health');
+          const data = await parseApiResponse(response, 'Storage check failed');
+          setStorageHealth({
+            ok: response.ok && Boolean(data.ok),
+            message: data.message || (response.ok ? 'Storage check complete.' : 'Storage check failed.'),
+            requestedMode: data.requestedMode || STORAGE_REQUESTED_MODE,
+            activeMode: data.activeMode || STORAGE_MODE
+          });
+        } catch (err) {
+          setStorageHealth({
+            ok: false,
+            message: err.message || 'Storage check failed due to network error.',
+            requestedMode: STORAGE_REQUESTED_MODE,
+            activeMode: STORAGE_MODE
+          });
+        } finally {
+          setCheckingStorage(false);
+        }
+      }
+
+      async function handleCreateCategory(name, type = 'course') {
+        try {
+          setCreatingCategory(true);
+          setError('');
+
+          const response = await fetch('/admin/api/categories', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, type })
+          });
+          const data = await parseApiResponse(response, 'Failed to create category');
+
+          if (!response.ok) {
+            throw new Error(data.message || 'Failed to create category');
+          }
+
+          if (data.category) {
+            setCategories((current) => mergeCategoryList(current, data.category));
+            setMessage(data.message || 'Category saved');
+            return data.category;
+          }
+
+          return null;
+        } catch (err) {
+          setError(err.message || 'Unable to create category');
+          return null;
+        } finally {
+          setCreatingCategory(false);
+        }
+      }
+
+      return (
+        <main className="min-h-screen bg-slate-100">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 lg:flex-row lg:p-6">
+            <DashboardSidebar />
+
+            {modalOpen ? (
+              <ProductModal
+                isOpen={modalOpen}
+                mode={mode}
+                categories={categories}
+                form={form}
+                setForm={setForm}
+                imageFile={imageFile}
+                setImageFile={setImageFile}
+                videoFiles={videoFiles}
+                setVideoFiles={setVideoFiles}
+                imagePreview={imagePreview}
+                setImagePreview={setImagePreview}
+                pdfFile={pdfFile}
+                setPdfFile={setPdfFile}
+                onClose={() => setModalOpen(false)}
+                onSubmit={handleSave}
+                saving={saving}
+                onCreateCategory={handleCreateCategory}
+                creatingCategory={creatingCategory}
+                uploadProgress={uploadProgress}
+              />
+            ) : null}
+
+            <section className="flex-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:p-6">
+              <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">Product Management</h1>
+                  <p className="text-sm text-slate-500">Manage products, images, videos, and inventory status.</p>
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                    <span>Storage Mode</span>
+                    <span className={`rounded-full px-2 py-0.5 ${STORAGE_MODE === 'Cloudinary' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                      {STORAGE_MODE}
+                    </span>
+                  </div>
+                  {STORAGE_WARNING ? (
+                    <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                      {STORAGE_WARNING} Requested: {STORAGE_REQUESTED_MODE}. Active: {STORAGE_MODE}.
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={testStorageConnection}
+                    disabled={checkingStorage}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {checkingStorage ? 'Checking Storage...' : 'Test Cloudinary Connection'}
+                  </button>
+                  <button
+                    onClick={openAddBookModal}
+                    className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-700"
+                  >
+                    Add Book
+                  </button>
+                  <button
+                    onClick={openAddModal}
+                    className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700"
+                  >
+                    Add Product
+                  </button>
+                </div>
+              </div>
+
+              {storageHealth ? (
+                <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${storageHealth.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-300 bg-amber-50 text-amber-900'}`}>
+                  <p className="font-semibold">Storage Check</p>
+                  <p>{storageHealth.message}</p>
+                  <p className="mt-1 text-xs">Requested: {storageHealth.requestedMode} | Active: {storageHealth.activeMode}</p>
+                </div>
+              ) : null}
+
+              <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search products"
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm ring-indigo-500 focus:outline-none focus:ring"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm ring-indigo-500 focus:outline-none focus:ring"
+                >
+                  <option value="">All statuses</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Hidden">Hidden</option>
+                </select>
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => setCategoryFilter(event.target.value)}
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm ring-indigo-500 focus:outline-none focus:ring"
+                >
+                  <option value="">All categories</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={typeFilter}
+                  onChange={(event) => setTypeFilter(event.target.value)}
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm ring-indigo-500 focus:outline-none focus:ring"
+                >
+                  <option value="">All types</option>
+                  <option value="course">Online Course</option>
+                  <option value="resource">Free Resource</option>
+                  <option value="book">Book</option>
+                  <option value="ielts">IELTS Preparation</option>
+                  <option value="level_test">Level Test</option>
+                </select>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  Total products: <strong className="text-slate-900">{totalProducts}</strong>
+                </div>
+              </div>
+
+              {message ? (
+                <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  {message}
+                </div>
+              ) : null}
+
+              {error ? (
+                <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                  {error}
+                </div>
+              ) : null}
+
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                  <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-3 py-3">Product</th>
+                      <th className="px-3 py-3">Category</th>
+                      <th className="px-3 py-3">Type</th>
+                      <th className="px-3 py-3">Sub. Price</th>
+                      <th className="px-3 py-3">Stock</th>
+                      <th className="px-3 py-3">Image</th>
+                      <th className="px-3 py-3">Video</th>
+                      <th className="px-3 py-3">Status</th>
+                      <th className="px-3 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {loading ? (
+                      <tr>
+                        <td className="px-3 py-6 text-center text-slate-500" colSpan="9">Loading products...</td>
+                      </tr>
+                    ) : products.length === 0 ? (
+                      <tr>
+                        <td className="px-3 py-6 text-center text-slate-500" colSpan="9">No products found for current filters.</td>
+                      </tr>
+                    ) : (
+                      products.map((product) => (
+                        <tr key={product.id} className="hover:bg-slate-50">
+                          <td className="px-3 py-3">
+                            <p className="font-semibold text-slate-900">{product.name || product.title}</p>
+                            <p className="line-clamp-1 text-xs text-slate-500">{product.description || 'No description'}</p>
+                          </td>
+                          <td className="px-3 py-3 text-slate-700">{product.category?.name || '-'}</td>
+                          <td className="px-3 py-3">
+                            <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase text-slate-600">
+                              {(product.type || 'course').replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 font-semibold text-slate-900">
+                            {formatPrice(product.category?.price)}
+                          </td>
+                          <td className="px-3 py-3 text-slate-700">
+                             {['course', 'book', 'resource', 'ielts', 'level_test'].includes(product.type) || (product.videos && product.videos.length > 0) || product.video ? '-' : (product.stock ?? 0)}
+                          </td>
+                          <td className="px-3 py-3">
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.name || product.title}
+                                className="h-14 w-14 rounded-lg border border-slate-200 object-cover"
+                              />
+                            ) : (
+                              <div className="h-14 w-14 rounded-lg border border-dashed border-slate-300 bg-slate-50" />
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            {product.type === 'book' ? (
+                              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">N/A (Book)</span>
+                            ) : product.video ? (
+                              <video
+                                src={product.video}
+                                controls
+                                className="h-14 w-20 rounded-lg border border-slate-200 bg-black object-cover"
+                              />
+                            ) : (
+                              <span className="text-xs text-slate-500">No Video</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className={`rounded-full px-2 py-1 text-xs font-semibold ${product.status === 'Active'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : product.status === 'Hidden'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-slate-200 text-slate-700'
+                              }`}>
+                              {product.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => openEditModal(product)}
+                                className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(product.id)}
+                                className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          {modalOpen ? (
+            <ProductModal
+              isOpen={modalOpen}
+              mode={mode}
+              categories={categories}
+              form={form}
+              setForm={setForm}
+              imageFile={imageFile}
+              setImageFile={setImageFile}
+              videoFiles={videoFiles}
+              setVideoFiles={setVideoFiles}
+              imagePreview={imagePreview}
+              setImagePreview={setImagePreview}
+              pdfFile={pdfFile}
+              setPdfFile={setPdfFile}
+              onClose={() => setModalOpen(false)}
+              onSubmit={handleSave}
+              saving={saving}
+              onCreateCategory={handleCreateCategory}
+              creatingCategory={creatingCategory}
+              uploadProgress={uploadProgress}
+            />
+          ) : null}
+        </main>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('admin-products-root')).render(<AdminProductsApp />);
+  </script>
+
+  <%- include('../partials/footer') %>

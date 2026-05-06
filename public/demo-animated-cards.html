@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animated Cards UI - Modern Design</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .page-header {
+      max-width: 1200px;
+      margin: 0 auto 40px;
+      text-align: center;
+    }
+
+    .page-header h1 {
+      font-size: 32px;
+      color: #1a1a1a;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .page-header p {
+      font-size: 16px;
+      color: #666;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section {
+      margin-bottom: 60px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 20px;
+      padding: 0 16px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding: 0 16px;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      padding: 12px 24px;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      background: white;
+      color: #667eea;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    .control-btn:hover {
+      background: #667eea;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .control-btn:active {
+      transform: translateY(0);
+    }
+
+    .demo-content {
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    /* Keyboard shortcuts info */
+    .shortcuts-info {
+      background: #f0f4ff;
+      border-left: 4px solid #667eea;
+      padding: 16px;
+      margin: 24px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .shortcuts-info strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #667eea;
+    }
+
+    .shortcuts-info div {
+      margin: 4px 0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      }
+
+      .page-header h1 {
+        color: #ffffff;
+      }
+
+      .page-header p {
+        color: #aaa;
+      }
+
+      .section-title {
+        color: #ffffff;
+      }
+
+      .demo-content {
+        background: #1a1a1a;
+      }
+
+      .control-btn {
+        background: #2a2a2a;
+        color: #667eea;
+        border-color: #667eea;
+      }
+
+      .control-btn:hover {
+        background: #667eea;
+        color: white;
+      }
+
+      .shortcuts-info {
+        background: rgba(102, 126, 234, 0.1);
+        color: #aaa;
+      }
+
+      .shortcuts-info strong {
+        color: #667eea;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .page-header h1 {
+        font-size: 24px;
+      }
+
+      .section-title {
+        font-size: 18px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="../css/animated-cards.css" />
+</head>
+<body>
+  <div class="page-header">
+    <h1>✨ Modern Animated Cards</h1>
+    <p>Premium, smooth animations with Netflix/Shopee-style UI. Tap cards, smooth scroll, and staggered entrance effects.</p>
+  </div>
+
+  <div class="demo-container">
+    <!-- Main Demo Section -->
+    <div class="section">
+      <h2 class="section-title">Interactive Cards Demo</h2>
+      <div class="controls">
+        <button class="control-btn" onclick="scrollToCard(0)">← First Card</button>
+        <button class="control-btn" onclick="scrollToCard(2)">→ Center</button>
+        <button class="control-btn" onclick="scrollToCard(4)">Last Card →</button>
+        <button class="control-btn" onclick="addNewCard()">+ Add Card</button>
+        <button class="control-btn" onclick="resetCards()">↻ Reset</button>
+      </div>
+
+      <div class="demo-content">
+        <div class="animated-cards-container" id="mainDemo">
+          <div class="cards-scroll-wrapper">
+            <!-- Card 1 -->
+            <div class="card card-item" data-index="0">
+              <div class="card-image"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+              <div class="card-content">
+                <h3 class="card-title">Premium Experience</h3>
+                <p class="card-description">Discover amazing features designed for you with smooth animations</p>
+                <button class="card-button">Learn More</button>
+              </div>
+              <div class="card-shine"></div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="card card-item" data-index="1">
+              <div class="card-image"
+                style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+              <div class="card-content">
+                <h3 class="card-title">Fast & Reliable</h3>
+                <p class="card-description">Lightning-fast performance you can trust every single time</p>
+                <button class="card-button">Explore</button>
+              </div>
+              <div class="card-shine"></div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="card card-item" data-index="2">
+              <div class="card-image"
+                style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+              <div class="card-content">
+                <h3 class="card-title">Innovation Hub</h3>
+                <p class="card-description">Stay ahead with cutting-edge technology and solutions</p>
+                <button class="card-button">Discover</button>
+              </div>
+              <div class="card-shine"></div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="card card-item" data-index="3">
+              <div class="card-image"
+                style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);"></div>
+              <div class="card-content">
+                <h3 class="card-title">24/7 Support</h3>
+                <p class="card-description">We're always here to help you succeed in your journey</p>
+                <button class="card-button">Contact Us</button>
+              </div>
+              <div class="card-shine"></div>
+            </div>
+
+            <!-- Card 5 -->
+            <div class="card card-item" data-index="4">
+              <div class="card-image"
+                style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"></div>
+              <div class="card-content">
+                <h3 class="card-title">Easy Integration</h3>
+                <p class="card-description">Seamlessly integrate with your existing workflow and systems</p>
+                <button class="card-button">Get Started</button>
+              </div>
+              <div class="card-shine"></div>
+            </div>
+          </div>
+
+          <!-- Scroll Indicators -->
+          <div class="scroll-indicators">
+            <button class="indicator-dot active" data-slide="0"></button>
+            <button class="indicator-dot" data-slide="1"></button>
+            <button class="indicator-dot" data-slide="2"></button>
+            <button class="indicator-dot" data-slide="3"></button>
+            <button class="indicator-dot" data-slide="4"></button>
+          </div>
+        </div>
+
+        <div class="shortcuts-info">
+          <strong>💡 Features:</strong>
+          <div>✓ Fade-in & slide-up entrance animations with staggered delays</div>
+          <div>✓ Smooth press effect (scale down) on tap/click</div>
+          <div>✓ Hover animations with elevation changes</div>
+          <div>✓ Horizontal smooth scroll with snap points</div>
+          <div>✓ Auto-updating scroll indicators</div>
+          <div>✓ Responsive design (mobile, tablet, desktop)</div>
+          <div>✓ Dark mode support</div>
+          <div>✓ Accessibility features (prefers-reduced-motion)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="section">
+      <h2 class="section-title">✨ Design Features</h2>
+      <div class="demo-content" style="padding: 32px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+          <div>
+            <h3 style="color: #667eea; margin-bottom: 8px;">🎬 Smooth Animations</h3>
+            <p style="font-size: 14px; color: #666; line-height: 1.6;">Fade-in and slide-up animations with cubic-bezier timing for premium feel. Each card enters with a slight delay.</p>
+          </div>
+          <div>
+            <h3 style="color: #764ba2; margin-bottom: 8px;">👆 Press Effects</h3>
+            <p style="font-size: 14px; color: #666; line-height: 1.6;">Cards scale down smoothly when tapped or clicked, with instant visual feedback for better UX.</p>
+          </div>
+          <div>
+            <h3 style="color: #f5576c; margin-bottom: 8px;">📱 Responsive Design</h3>
+            <p style="font-size: 14px; color: #666; line-height: 1.6;">Adapts perfectly to mobile, tablet, and desktop with optimized sizes and spacing.</p>
+          </div>
+          <div>
+            <h3 style="color: #00f2fe; margin-bottom: 8px;">🌊 Horizontal Scroll</h3>
+            <p style="font-size: 14px; color: #666; line-height: 1.6;">Smooth scrolling with snap points, scroll indicators, and touch-friendly interaction.</p>
+          </div>
+          <div>
+            <h3 style="color: #43e97b; margin-bottom: 8px;">🎨 Modern Design</h3>
+            <p style="font-size: 14px; color: #666; line-height: 1.6;">Rounded corners, soft shadows, gradient backgrounds, and shine effects for premium appearance.</p>
+          </div>
+          <div>
+            <h3 style="color: #fa709a; margin-bottom: 8px;">🌙 Dark Mode</h3>
+            <p style="font-size: 14px; color: #666; line-height: 1.6;">Automatically adapts to system dark mode preference with proper color adjustments.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/animated-cards.js"></script>
+  <script>
+    // Demo controls
+    function scrollToCard(index) {
+      if (window.animatedCards) {
+        window.animatedCards.scrollToCard(index);
+      }
+    }
+
+    let cardCount = 5;
+
+    function addNewCard() {
+      if (!window.animatedCards) return;
+
+      const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      ];
+
+      const titles = [
+        'Dynamic Content',
+        'Scalable Solution',
+        'Growing Platform',
+        'Smart Features',
+        'Powerful Tools',
+      ];
+
+      const descriptions = [
+        'Add cards dynamically with smooth animations',
+        'Grow your collection as needed',
+        'Expand without reloading',
+        'Intelligent card management',
+        'Complete control over content',
+      ];
+
+      const randomIndex = cardCount % gradients.length;
+      cardCount++;
+
+      window.animatedCards.addCard({
+        background: gradients[randomIndex],
+        title: titles[randomIndex],
+        description: descriptions[randomIndex],
+        buttonText: 'Explore',
+      });
+
+      console.log(`✨ New card added! Total: ${cardCount}`);
+    }
+
+    function resetCards() {
+      location.reload();
+    }
+
+    // Log demo info
+    console.log(
+      '%c🚀 Animated Cards Demo Ready!',
+      'font-size: 16px; color: #667eea; font-weight: bold;'
+    );
+    console.log(
+      '%cUse: window.animatedCards.scrollToCard(index), addNewCard(), resetCards()',
+      'font-size: 12px; color: #666;'
+    );
+  </script>
+</body>
+</html>

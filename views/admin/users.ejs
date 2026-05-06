@@ -1,46 +1,19 @@
 <%- include('../partials/head', { title }) %>
 <%- include('../partials/navbar') %>
 
-<main class="shell section">
-  <div class="section-head">
-    <h1>Manage Users</h1>
-    <a href="/admin" class="btn-inline">Back to Dashboard</a>
+<main class="shell section" style="max-width: 1200px; margin: 0 auto; padding: 2rem 1rem;">
+  <div class="section-head" style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 2.2rem; color: #111827; margin-bottom: 0.5rem;">User Management</h1>
+      <p style="color: #6b7280; font-size: 1.1rem; margin: 0;">Manage your platform's members and assign administrative roles.</p>
+    </div>
+    <a href="/admin" class="btn" style="background: #f3f4f6; color: #374151; font-weight: 500; border: 1px solid #d1d5db;">&larr; Back to Dashboard</a>
   </div>
 
-  <div class="card table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Role</th>
-          <th>Created</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% users.forEach((user) => { %>
-          <tr>
-            <td><%= user.id %></td>
-            <td><%= user.name %></td>
-            <td><%= user.email %></td>
-            <td><%= user.role %></td>
-            <td><%= new Date(user.created_at).toLocaleDateString() %></td>
-            <td>
-              <form method="post" action="/admin/users/<%= user.id %>/role" class="inline-form">
-                <select name="role">
-                  <option value="user" <%= user.role === 'user' ? 'selected' : '' %>>User</option>
-                  <option value="admin" <%= user.role === 'admin' ? 'selected' : '' %>>Admin</option>
-                </select>
-                <button type="submit" class="btn-inline">Save</button>
-              </form>
-            </td>
-          </tr>
-        <% }) %>
-      </tbody>
-    </table>
-  </div>
-</main>
+<style>
+  table tbody tr:hover { background: #f8fafc !important; }
+  button[type="submit"]:hover { filter: brightness(0.95); }
+  select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+</style>
 
 <%- include('../partials/footer') %>

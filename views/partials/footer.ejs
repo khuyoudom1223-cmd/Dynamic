@@ -1,10 +1,71 @@
-<footer class="site-footer">
-  <div class="shell footer-wrap">
-    <p>Copyright <%= new Date().getFullYear() %> Dynamics Node. Crafted for modern workflows.</p>
-    <p>API token ready after login: <%= apiToken ? 'yes' : 'no' %></p>
+<footer class="site-footer" style="background: var(--bg); border-top: 1px solid var(--line); padding: 4rem 0;">
+  <div class="shell footer-wrap" style="text-align: center;">
+    <div style="margin-bottom: 2rem; opacity: 0.8;">
+      <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text); margin-bottom: 0.5rem;">Eng-Learn</h2>
+      <p style="color: var(--muted); font-size: 0.9rem; max-width: 400px; margin: 0 auto;">Your premium destination for modern educational materials and professional development.</p>
+    </div>
+    <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem;">
+      <a href="/products" style="color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: color 0.2s;">Products</a>
+      <a href="/about" style="color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: color 0.2s;">About Us</a>
+      <a href="/contact" style="color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: color 0.2s;">Contact</a>
+    </div>
+    <p style="color: var(--muted); font-size: 0.85rem; margin: 0;">Copyright &copy; <%= new Date().getFullYear() %> Eng-Learn. Crafted for modern workflows.</p>
+    <% /* Cart system removed to favor direct single-item purchase */ %>
   </div>
 </footer>
+
+<!-- Global Premium Toast -->
+<div id="global-toast"
+  style="display: none; position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 14px 28px; border-radius: 999px; box-shadow: var(--shadow-premium); z-index: 9999; font-weight: 700; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.1); font-size: 0.95rem;">
+  <div style="width: 24px; height: 24px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  </div>
+  <span id="global-toast-text"></span>
+</div>
+
+<style>
+  @keyframes toastIn {
+    0% { transform: translate(-50%, 20px) scale(0.9); opacity: 0; }
+    100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  }
+  @keyframes toastOut {
+    0% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, 20px) scale(0.9); opacity: 0; }
+  }
+  .toast-active { animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; display: flex !important; }
+  .toast-closing { animation: toastOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  
+  .site-footer a:hover { color: var(--brand) !important; }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const successMsg = urlParams.get('success');
+    if (successMsg) {
+      const toast = document.getElementById("global-toast");
+      const toastText = document.getElementById("global-toast-text");
+      toastText.textContent = decodeURIComponent(successMsg);
+      toast.classList.add("toast-active");
+
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+
+      setTimeout(() => {
+        toast.classList.remove("toast-active");
+        toast.classList.add("toast-closing");
+        setTimeout(() => {
+          toast.style.display = "none";
+          toast.classList.remove("toast-closing");
+        }, 300);
+      }, 4000);
+    }
+  });
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="/js/main.js"></script>
+<script src="/js/khqr-checkout.js"></script>
 </body>
 </html>

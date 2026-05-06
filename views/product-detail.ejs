@@ -1,64 +1,187 @@
 <%- include('partials/head', { title }) %>
-<%- include('partials/navbar') %>
+  <%- include('partials/navbar') %>
 
-<main class="shell section">
-  <% const isFree = !product.price || Number(product.price) === 0; %>
-  <article class="card detail-grid">
-    <div class="detail-media">
-      <% if (product.video && isFree) { %>
-        <video controls style="width: 100%; height: auto; border-radius: 12px; background: #000;">
-          <source src="<%= product.video %>" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-      <% } else if (product.image) { %>
-        <img src="<%= product.image %>" alt="<%= product.title %>" style="width: 100%; border-radius: 12px;" />
-      <% } else { %>
-        <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200" alt="<%= product.title %>" style="width: 100%; border-radius: 12px;" />
-      <% } %>
-    </div>
-    <div class="detail-content">
-      <p class="tag"><%= product.category ? product.category.name : 'General' %></p>
-      <h1><%= product.title %></h1>
-      
-      <div class="price-section">
-        <% if (isFree) { %>
-          <div class="price-badge-free">FREE</div>
-          <p class="price-label">Watch this free content</p>
-        <% } else { %>
-          <p class="price">$<%= Number(product.price).toFixed(2) %></p>
-          <p class="price-label">Premium content</p>
-        <% } %>
-      </div>
+    <main class="shell section" style="padding-top: 4rem;">
+      <% const category=product.category; 
+         const catPrice = (product.type === 'book' && product.price !== undefined && product.price !== null) 
+           ? Number(product.price) 
+           : (category && category.price !== undefined && category.price !== null ? Number(category.price) : 0);
+         const isResource=product.type==='resource' ; const isFree=isResource ||
+         catPrice===0; const canPlayVideo=Boolean((isPaid || isResource) && videoUrl); %>
+        
+        <article class="detail-container" style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 3rem; align-items: start;">
+          <!-- Media Section -->
+          <div class="detail-media-card" style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md);">
+            <% const videos=Array.isArray(product.videos) ? product.videos : (product.video ? [product.video] : []);
+              const activeVideoIndex=typeof videoIndex !=='undefined' ? videoIndex : 0; const
+              activeVideoUrl=canPlayVideo ? `/media/videos/${product.id}/${activeVideoIndex}` : null; %>
 
-      <p class="description"><%= product.description || "" %></p>
+              <div style="position: relative; aspect-ratio: 16/9; background: #000; display: flex; align-items: center; justify-content: center;">
+                <% if (canPlayVideo && activeVideoUrl) { %>
+                  <video key="<%= activeVideoIndex %>" controls
+                    style="width: 100%; height: 100%; object-fit: contain;">
+                    <source src="<%= activeVideoUrl %>" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                  <% } else if (product.image) { %>
+                    <img src="<%= product.image %>" alt="<%= product.name || product.title %>"
+                      style="width: 100%; height: 100%; object-fit: cover;" />
+                  <% } else { %>
+                    <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=1200"
+                      alt="<%= product.name || product.title %>"
+                      style="width: 100%; height: 100%; object-fit: cover;" />
+                  <% } %>
 
-      <div class="action-buttons">
-        <% if (isFree && product.video) { %>
-          <button class="btn" disabled style="cursor: default; opacity: 0.7;">
-            ✓ Available to Watch
-          </button>
-          <p class="hint">This free content is ready to view. Check the video above.</p>
-        <% } else if (isFree) { %>
-          <button class="btn" disabled style="cursor: default; opacity: 0.7;">
-            ✓ Free Content
-          </button>
-          <p class="hint">This item is available to download and view.</p>
-        <% } else if (currentUser) { %>
-          <form action="/orders" method="post" class="inline-form">
-            <input type="hidden" name="productId" value="<%= product.id %>" />
-            <input type="hidden" name="total_price" value="<%= Number(product.price).toFixed(2) %>" />
-            <button class="btn" type="submit">Buy Now</button>
-          </form>
-          <p class="hint">Purchase this premium content</p>
-        <% } else { %>
-          <p class="hint" style="color: var(--accent);">Login first to purchase this product.</p>
-          <a href="/login" class="btn">Login to Purchase</a>
-        <% } %>
-      </div>
+                  <% if (!canPlayVideo && !isFree) { %>
+                    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 2rem;">
+                      <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; border: 1px solid rgba(255,255,255,0.3);">
+                        <svg width="24" height="24" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
+                      </div>
+                      <h4 style="margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 800;">Content Locked</h4>
+                      <p style="margin: 0; font-size: 0.9rem; opacity: 0.9; max-width: 280px;">Purchase this course to unlock all lessons and materials.</p>
+                    </div>
+                  <% } %>
+              </div>
 
-      <a href="/products" class="btn-inline mt-20">Back to list</a>
-    </div>
-  </article>
-</main>
+              <div style="padding: 2rem;">
+                <h1 style="margin: 0 0 1.5rem 0; font-size: 2.25rem; font-weight: 800; color: var(--text); letter-spacing: -0.03em; line-height: 1.2;">
+                  <%= product.name || product.title %>
+                </h1>
+                
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 2rem; flex-wrap: wrap;">
+                  <span style="background: var(--brand-soft); color: var(--brand); padding: 4px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; border: 1px solid color-mix(in srgb, var(--brand) 15%, transparent); letter-spacing: 0.05em;">
+                    <%= category ? category.name : 'General' %>
+                  </span>
+                  <% if (product.type && product.type !=='course' ) { %>
+                    <span style="background: var(--bg); color: var(--muted); padding: 4px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; border: 1px solid var(--line); letter-spacing: 0.05em;">
+                      <%= product.type.replace('_', ' ' ) %>
+                    </span>
+                  <% } %>
+                </div>
 
-<%- include('partials/footer') %>
+                <div style="color: var(--muted); line-height: 1.7; font-size: 1.05rem;">
+                  <%= product.description || "" %>
+                </div>
+              </div>
+          </div>
+
+          <!-- Sidebar Section -->
+          <aside class="detail-sidebar" style="position: sticky; top: 100px;">
+            <div style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-md); margin-bottom: 2rem;">
+              <div style="margin-bottom: 2rem;">
+                <% if (isPaid) { %>
+                  <div style="display: flex; align-items: center; gap: 12px; color: var(--success); background: color-mix(in srgb, var(--success) 10%, transparent); padding: 1rem; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--success) 20%, transparent);">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                    <span style="font-weight: 800; font-size: 1.1rem;">Purchased</span>
+                  </div>
+                <% } else if (isFree) { %>
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="color: var(--success); font-weight: 900; font-size: 2.25rem; letter-spacing: -0.02em;">FREE</span>
+                    <span style="color: var(--muted); font-size: 0.85rem; font-weight: 700; text-transform: uppercase;">Public Content</span>
+                  </div>
+                <% } else { %>
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="color: var(--text); font-weight: 900; font-size: 2.5rem; letter-spacing: -0.03em;">$<%= catPrice.toFixed(2) %></span>
+                    <span style="color: var(--muted); font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;"><%= product.type === 'book' ? 'One-time Purchase' : 'Lifetime Category Access' %></span>
+                  </div>
+                <% } %>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <% if (!isPaid && !isFree) { %>
+                  <% if (catPrice > 0) { %>
+                    <button class="btn btn-buy-khqr" type="button"
+                      onclick="khqrCheckout.startPayment('<%= category ? category.id : product.id %>', '<%= catPrice %>', this)"
+                      style="width: 100%; height: 58px; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: var(--radius); box-shadow: 0 10px 20px color-mix(in srgb, var(--brand) 20%, transparent);">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                      <%= product.type === 'book' ? 'Buy with KHQR' : 'Unlock Collection' %>
+                    </button>
+                  <% } %>
+                <% } else { %>
+                  <a href="/products" class="btn-outline" style="width: 100%; height: 58px; font-size: 1.1rem; font-weight: 800; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; border-width: 2px;">
+                    Browse More
+                  </a>
+                <% } %>
+              </div>
+              
+              <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.95rem;">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"/></svg>
+                  <span>Lifetime offline access</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 0.95rem;">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                  <span>Certificate of completion</span>
+                </div>
+              </div>
+            </div>
+
+            <% if (product.type !=='book' && videos.length> 0) { %>
+              <div style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                  Course Playlist
+                </h3>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                  <% videos.forEach((v, i)=> { %>
+                    <a href="<%= (canPlayVideo || isFree) ? `/products/${product.id}?v=${i}` : '#' %>"
+                      style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid <%= i === activeVideoIndex ? 'var(--brand)' : 'var(--line)' %>; background: <%= i === activeVideoIndex ? 'var(--brand-soft)' : 'var(--surface)' %>; text-decoration: none; transition: all 0.2s;">
+                      <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 0.8rem; font-weight: 800; color: <%= i === activeVideoIndex ? 'var(--brand)' : 'var(--muted)' %>; width: 20px;">
+                          <%= i + 1 %>
+                        </span>
+                        <span style="font-size: 0.9rem; font-weight: 700; color: <%= i === activeVideoIndex ? 'var(--text)' : 'var(--muted)' %>;">Lesson <%= i + 1 %></span>
+                      </div>
+                      <% if (canPlayVideo || isFree) { %>
+                        <svg width="16" height="16" fill="currentColor" style="color: var(--brand);" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" /></svg>
+                      <% } else { %>
+                        <svg width="14" height="14" fill="currentColor" style="color: var(--muted); opacity: 0.5;" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
+                      <% } %>
+                    </a>
+                  <% }) %>
+                </div>
+              </div>
+            <% } else if (product.type === 'book' && product.pdf_file) { %>
+              <div style="background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+                <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                  Book Materials
+                </h3>
+                <% if (isPaid || isFree) { %>
+                  <a href="<%= product.pdf_file %>" target="_blank"
+                    style="display: flex; align-items: center; justify-content: space-between; padding: 1rem; border-radius: 12px; border: 1px solid var(--brand); background: var(--brand-soft); text-decoration: none; transition: all 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="width: 32px; height: 32px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--brand); border: 1px solid var(--brand);">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                      </div>
+                      <div style="display: flex; flex-direction: column;">
+                        <span style="font-size: 0.95rem; font-weight: 800; color: var(--text);">Full Version (PDF)</span>
+                        <span style="font-size: 0.75rem; color: var(--muted);">Click to read or download</span>
+                      </div>
+                    </div>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                  </a>
+                <% } else { %>
+                  <div style="padding: 1rem; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-soft); display: flex; align-items: center; gap: 12px; opacity: 0.7;">
+                    <svg width="20" height="20" fill="currentColor" style="color: var(--muted);" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
+                    <span style="font-size: 0.9rem; font-weight: 700; color: var(--muted);">Content Locked</span>
+                  </div>
+                <% } %>
+              </div>
+            <% } %>
+          </aside>
+        </article>
+    </main>
+
+    <style>
+      @media (max-width: 960px) {
+        .detail-container {
+          grid-template-columns: 1fr;
+        }
+        .detail-sidebar {
+          position: static;
+        }
+      }
+    </style>
+
+    <%- include('partials/footer') %>

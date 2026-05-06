@@ -2,44 +2,146 @@
 <%- include('../partials/navbar') %>
 
 <main class="shell section">
-  <div class="section-head">
-    <h1>Manage Categories</h1>
-    <a href="/admin" class="btn-inline">Back to Dashboard</a>
+  <div class="section-head" style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+      <h1 style="font-size: 2.2rem; color: #111827; margin-bottom: 0.5rem;">Manage Categories</h1>
+      <p style="color: #6b7280; font-size: 1.1rem; margin: 0;">Organize and group your product catalog.</p>
+    </div>
+    <a href="/admin" class="btn" style="background: #f3f4f6; color: #374151; font-weight: 500; border: 1px solid #d1d5db;">&larr; Back to Dashboard</a>
   </div>
 
-  <div class="grid two-col">
-    <section class="card">
-      <h2>Add Category</h2>
-      <form method="post" action="/admin/categories" class="grid-form">
-        <label>Name <input type="text" name="name" required /></label>
-        <button class="btn" type="submit">Add</button>
+  <div class="grid two-col" style="gap: 2.5rem; align-items: flex-start;">
+    <section class="card" style="padding: 2rem;">
+      <h2 style="font-size: 1.5rem; color: #111827; margin-bottom: 1.5rem;">Add New Category</h2>
+      
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px;">
+          <svg style="width: 18px; height: 18px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+          <%= error %>
+        </div>
+      <% } %>
+
+      <% if (typeof success !== 'undefined' && success) { %>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px;">
+          <svg style="width: 18px; height: 18px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+          <%= success %>
+        </div>
+      <% } %>
+
+      <form method="post" action="/admin/categories" enctype="multipart/form-data" class="grid-form" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-weight: 500; color: #374151; font-size: 0.95rem;">Category Name</label>
+          <input type="text" name="name" required placeholder="e.g. Grammar, Vocabulary..." style="padding: 0.8rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;" />
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-weight: 500; color: #374151; font-size: 0.95rem;">Thumbnail Image</label>
+          <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+            <input type="file" name="image" accept="image/*" style="font-size: 0.9rem;" />
+            <p style="font-size: 0.75rem; color: #6b7280; margin: 0;">Recommended: 400x250px or aspect ratio 16:10</p>
+          </div>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+          <label style="font-weight: 500; color: #374151; font-size: 0.95rem;">Type</label>
+          <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 0.5rem;">
+            <label style="display: flex; align-items: center; gap: 10px; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" class="type-option">
+              <input type="radio" name="type" value="resource" style="width: 18px; height: 18px;" />
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 600; font-size: 0.9rem;">📚 Free Resources</span>
+                <span style="font-size: 0.75rem; color: #6b7280;">Downloadable files, docs, etc.</span>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" class="type-option">
+              <input type="radio" name="type" value="course" checked style="width: 18px; height: 18px;" />
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 600; font-size: 0.9rem;">🎬 Online Courses</span>
+                <span style="font-size: 0.75rem; color: #6b7280;">Standard video lecture series</span>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" class="type-option">
+              <input type="radio" name="type" value="ielts" style="width: 18px; height: 18px;" />
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 600; font-size: 0.9rem;">📝 IELTS Preparation</span>
+                <span style="font-size: 0.75rem; color: #6b7280;">Exam specific study material</span>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" class="type-option">
+              <input type="radio" name="type" value="level_test" style="width: 18px; height: 18px;" />
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 600; font-size: 0.9rem;">🎯 Level Test</span>
+                <span style="font-size: 0.75rem; color: #6b7280;">Assessment and placement tests</span>
+              </div>
+            </label>
+            <label style="display: flex; align-items: center; gap: 10px; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" class="type-option">
+              <input type="radio" name="type" value="book" style="width: 18px; height: 18px;" />
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 600; font-size: 0.9rem;">📖 Books & E-Books</span>
+                <span style="font-size: 0.75rem; color: #6b7280;">Educational books and guides</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div id="price-container" style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <label style="font-weight: 500; color: #374151; font-size: 0.95rem;">Subscription Price ($)</label>
+          <input type="number" name="price" id="price-input" required step="0.01" min="0.01" value="10" style="padding: 0.8rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem;" />
+          <p id="price-helper" style="font-size: 0.75rem; color: #6b7280; margin: 0;">Subscription price is required for paid courses.</p>
+        </div>
+        <button class="btn" type="submit" style="margin-top: 1rem; padding: 0.8rem; font-size: 1rem;">Create Category</button>
       </form>
     </section>
 
-    <section class="card table-wrap">
-      <h2>Category List</h2>
-      <table>
+    <section class="card table-wrap" style="padding: 0; overflow: hidden;">
+      <div style="padding: 1.5rem 1.5rem 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; background: #fafafa;">
+        <h2 class="category-list-title" style="font-size: 1.3rem; color: #111827; margin: 0;">Category List (<%= categories.length %>)</h2>
+      </div>
+      <table style="width: 100%; border-collapse: collapse;">
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Actions</th>
+          <tr style="background: #f9fafb; text-align: left; border-bottom: 1px solid #e5e7eb;">
+            <th style="padding: 1rem 1.5rem; font-weight: 600; color: #6b7280; font-size: 0.85rem; text-transform: uppercase;">Image</th>
+            <th style="padding: 1rem 1.5rem; font-weight: 600; color: #6b7280; font-size: 0.85rem; text-transform: uppercase;">Name & Price</th>
+
           </tr>
         </thead>
         <tbody>
-          <% categories.forEach((category) => { %>
+          <% if (!categories.length) { %>
             <tr>
-              <td data-label="ID"><code><%= category.id.substring(0, 8) %>...</code></td>
-              <td data-label="Name">
-                <form class="inline-form" method="post" action="/admin/categories/<%= category.id %>?_method=PUT">
-                  <input type="text" name="name" value="<%= category.name %>" required />
-                  <button class="btn-inline" type="submit">Update</button>
-                </form>
+              <td colspan="3" style="padding: 2rem; text-align: center; color: #6b7280;">No categories found. Create your first one!</td>
+            </tr>
+          <% } %>
+          <% categories.forEach((category) => { %>
+            <tr class="category-row" data-type="<%= category.type || 'course' %>" style="border-bottom: 1px solid #f3f4f6; transition: background 0.2s;">
+              <td style="padding: 1rem 1.5rem;">
+                <% if (category.image) { %>
+                  <img src="<%= category.image %>" style="width: 60px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb;" />
+                <% } else { %>
+                  <div style="width: 60px; height: 40px; background: #f3f4f6; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #9ca3af;">
+                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </div>
+                <% } %>
               </td>
-              <td data-label="Actions">
-                <form method="post" action="/admin/categories/<%= category.id %>?_method=DELETE" onsubmit="return confirm('Delete this category?')">
-                  <button class="ghost-btn" style="width: 100%;" type="submit">Delete</button>
+              <td data-label="Name" style="padding: 1rem 1.5rem;">
+                <form class="inline-form" method="post" action="/admin/categories/<%= category.id %>?_method=PUT" enctype="multipart/form-data" style="display: flex; gap: 0.5rem; align-items: center; margin: 0; flex-wrap: wrap;">
+                  <input type="text" name="name" value="<%= category.name %>" required placeholder="Name" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; width: 140px; font-size: 0.95rem;" />
+                  <select name="type" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 0.9rem; background: white;">
+                    <option value="resource" <%= category.type === 'resource' ? 'selected' : '' %>>Resource</option>
+                    <option value="course" <%= (!category.type || category.type === 'course') ? 'selected' : '' %>>Course</option>
+                    <option value="book" <%= category.type === 'book' ? 'selected' : '' %>>Book</option>
+                    <option value="ielts" <%= category.type === 'ielts' ? 'selected' : '' %>>IELTS</option>
+                    <option value="level_test" <%= category.type === 'level_test' ? 'selected' : '' %>>Level Test</option>
+                  </select>
+                  <div style="display: flex; align-items: center; gap: 0.3rem;">
+                    <span style="color: #6b7280;">$</span>
+                    <input type="number" name="price" value="<%= category.price || 0 %>" step="0.01" min="0" required style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; width: 70px; font-size: 0.95rem;" />
+                  </div>
+                  <input type="file" name="image" accept="image/*" style="font-size: 0.75rem; width: 150px;" />
+                  <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="submit" style="background: #e0f2fe; color: #2563eb; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: 500; cursor: pointer; transition: background 0.2s;">Save</button>
+                    <button type="button" onclick="if(confirm('Delete this category permanently?')) { document.getElementById('delete-form-<%= category.id %>').submit(); }" style="background: #fee2e2; color: #dc2626; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: 500; cursor: pointer; transition: background 0.2s;">Delete</button>
+                  </div>
                 </form>
+                <form id="delete-form-<%= category.id %>" method="post" action="/admin/categories/<%= category.id %>?_method=DELETE" style="display: none;"></form>
               </td>
             </tr>
           <% }) %>
@@ -48,5 +150,87 @@
     </section>
   </div>
 </main>
+
+<style>
+  table tbody tr:hover { background: #f8fafc; }
+  button[type="submit"]:hover { filter: brightness(0.95); }
+  .grid-form input:focus { border-color: #3b82f6 !important; outline: 1px solid #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+  .type-option:has(input:checked) { border-color: #3b82f6 !important; background: #eff6ff; }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const typeInputs = document.querySelectorAll('input[name="type"]');
+    const rows = document.querySelectorAll('.category-row');
+    const categoryTitle = document.querySelector('.category-list-title');
+
+    const priceInput = document.getElementById('price-input');
+    const priceContainer = document.getElementById('price-container');
+    const priceHelper = document.getElementById('price-helper');
+
+    function filterCategories(selectedType) {
+      const isPaid = (selectedType === 'course' || selectedType === 'ielts' || selectedType === 'level_test' || selectedType === 'book');
+      
+      // Update Price UI
+      if (selectedType === 'resource') {
+        priceContainer.style.display = 'none';
+        priceInput.value = '0';
+        priceInput.min = '0';
+      } else {
+        priceContainer.style.display = 'flex';
+        if (priceInput.value === '0') priceInput.value = '10';
+        priceInput.min = '0.01';
+        priceInput.required = true;
+        
+        if (selectedType === 'course') {
+           priceHelper.textContent = 'Price is required for Online Courses.';
+        } else if (selectedType === 'ielts') {
+           priceHelper.textContent = 'Price is required for IELTS Preparation.';
+        } else if (selectedType === 'book') {
+           priceHelper.textContent = 'Price is required for Books & E-Books.';
+        } else {
+           priceHelper.textContent = 'Price is required for Level Tests.';
+        }
+      }
+
+      let visibleCount = 0;
+      rows.forEach(row => {
+        if (row.dataset.type === selectedType) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      // Update title to show what we are looking at
+      const typeLabels = {
+        'resource': 'Free Resources',
+        'course': 'Online Courses',
+        'book': 'Books & E-Books',
+        'ielts': 'IELTS Preparation',
+        'level_test': 'Level Tests'
+      };
+      
+      if (categoryTitle) {
+        categoryTitle.textContent = `${typeLabels[selectedType]} (${visibleCount})`;
+      }
+    }
+
+    typeInputs.forEach(input => {
+      input.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          filterCategories(e.target.value);
+        }
+      });
+    });
+
+    // Initial filter based on checked radio (usually 'course')
+    const initialChecked = document.querySelector('input[name="type"]:checked');
+    if (initialChecked) {
+      filterCategories(initialChecked.value);
+    }
+  });
+</script>
 
 <%- include('../partials/footer') %>
