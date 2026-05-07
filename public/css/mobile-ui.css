@@ -154,9 +154,9 @@
         display: none !important;
     }
 
-    .cards-grid > *,
-    .products-grid > *,
-    .book-cards-grid > * {
+    .cards-grid>*,
+    .products-grid>*,
+    .book-cards-grid>* {
         flex: 0 0 85vw !important;
         min-width: 300px !important;
         max-width: 400px !important;
@@ -627,11 +627,30 @@
         --font-xs: 0.75rem;
     }
 
-    .h1 { font-size: var(--font-3xl) !important; font-weight: 800 !important; letter-spacing: -0.03em !important; }
-    .h2 { font-size: var(--font-2xl) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }
-    .h3 { font-size: var(--font-xl) !important; font-weight: 700 !important; }
-    .text-muted { color: var(--muted) !important; }
-    .text-sm { font-size: var(--font-sm) !important; }
+    .h1 {
+        font-size: var(--font-3xl) !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.03em !important;
+    }
+
+    .h2 {
+        font-size: var(--font-2xl) !important;
+        font-weight: 800 !important;
+        letter-spacing: -0.02em !important;
+    }
+
+    .h3 {
+        font-size: var(--font-xl) !important;
+        font-weight: 700 !important;
+    }
+
+    .text-muted {
+        color: var(--muted) !important;
+    }
+
+    .text-sm {
+        font-size: var(--font-sm) !important;
+    }
 
     /* Scroll Reveal Animation */
     .reveal {
@@ -725,15 +744,15 @@
         padding-left: var(--space-lg);
         padding-right: var(--space-lg);
     }
-    
+
     .recommended-card {
         flex: 0 0 280px;
     }
-    
+
     .recommended-card.featured {
         flex: 0 0 310px;
     }
-    
+
     .recommended-card .card-media {
         height: 300px;
     }
