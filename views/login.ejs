@@ -24,9 +24,52 @@
       <button class="btn" type="submit" style="width: 100%; padding: 0.8rem; font-size: 1rem; background: #3b82f6;">Sign In</button>
     </form>
     
-    <p style="margin-top: 2rem; color: #6b7280; font-size: 0.95rem;">
-      Don't have an account? <a href="/register" style="color: #3b82f6; font-weight: 500; text-decoration: none;">Create one</a>
-    </p>
+    <div style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line);">
+      <p style="color: #6b7280; font-size: 0.95rem; margin-bottom: 0.75rem;">
+        Don't have an account yet?
+      </p>
+      <a href="/register" class="create-account-link" style="display: inline-flex; align-items: center; gap: 8px; color: var(--brand); font-weight: 800; font-size: 1.1rem; text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; background: var(--brand-soft); transition: all 0.3s ease; position: relative; overflow: hidden;">
+        <span style="background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Create account</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--brand);">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </a>
+    </div>
+
+    <style>
+      .create-account-link {
+        animation: linkPulse 2s infinite;
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.1);
+      }
+      
+      .create-account-link:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+        background: white !important;
+        text-decoration: underline !important;
+      }
+
+      @keyframes linkPulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .create-account-link {
+          width: 100%;
+          justify-content: center;
+          padding: 0.8rem;
+        }
+      }
+    </style>
   </div>
 </main>
 

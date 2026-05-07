@@ -544,9 +544,9 @@ module.exports = function webRoutes(router) {
       const safeQuery = escapeRegex(q);
       filterClauses.push({
         $or: [
-        { title: { $regex: safeQuery, $options: "i" } },
-        { name: { $regex: safeQuery, $options: "i" } },
-        { description: { $regex: safeQuery, $options: "i" } }
+          { title: { $regex: safeQuery, $options: "i" } },
+          { name: { $regex: safeQuery, $options: "i" } },
+          { description: { $regex: safeQuery, $options: "i" } }
         ]
       });
     }
@@ -711,7 +711,7 @@ module.exports = function webRoutes(router) {
     return res.sendFile(filePath);
   });
 
-  router.post("/orders/buy-now", async (req, res) => {
+  router.post("/orders/buy-now", ensureAuth, async (req, res) => {
     const db = getDb();
     const productId = req.body.productId ? toObjectId(req.body.productId) : null;
 
@@ -967,7 +967,9 @@ module.exports = function webRoutes(router) {
 
       req.session.apiToken = token;
 
-      return res.redirect("/");
+      const redirectTo = req.session.returnTo || "/";
+      delete req.session.returnTo;
+      return res.redirect(redirectTo);
     }
   );
 
@@ -1570,7 +1572,7 @@ module.exports = function webRoutes(router) {
       const db = getDb();
       const userId = toObjectId(req.params.id);
       const newRole = req.body.role === "admin" ? "admin" : "user";
-      
+
       if (userId) {
         await db.collection("users").updateOne(
           { _id: userId },
@@ -1590,7 +1592,7 @@ module.exports = function webRoutes(router) {
       if (userId) {
         // Prevent deleting yourself
         if (userId.toString() === _req.session.user.id) {
-           return res.redirect("/admin/users?error=Cannot+delete+yourself");
+          return res.redirect("/admin/users?error=Cannot+delete+yourself");
         }
         await db.collection("users").deleteOne({ _id: userId });
       }

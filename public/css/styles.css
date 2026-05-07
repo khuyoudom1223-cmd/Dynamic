@@ -1256,20 +1256,3 @@ details {
     text-align: center;
   }
 }
-}
-
-.footer-nav {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
-  justify-content: center !important;
-  gap: 1rem 2rem !important;
-  width: 100% !important;
-  max-width: 300px !important;
-  margin: 0 auto !important;
-}
-
-.footer-bottom {
-  margin-top: var(--space-2xl);
-  text-align: center;
-}
-}

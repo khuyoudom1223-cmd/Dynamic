@@ -9,6 +9,7 @@ function ensureAuth(req, res, next) {
     if (isApiRequest(req)) {
       return res.status(401).json({ message: "Unauthorized" });
     }
+    req.session.returnTo = req.originalUrl;
     return res.redirect("/login");
   }
   return next();

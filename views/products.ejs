@@ -6,7 +6,8 @@
         <h1
           style="font-size: 3rem; color: var(--text); margin-bottom: 0.75rem; letter-spacing: -0.04em; font-weight: 800;">
           Explore Catalog</h1>
-        <p style="color: var(--muted); font-size: 1.15rem; font-weight: 500; margin: 0;">Browsing <%= Number.isFinite(total) ? total : products.length %> active
+        <p style="color: var(--muted); font-size: 1.15rem; font-weight: 500; margin: 0;">Browsing <%=
+            Number.isFinite(total) ? total : products.length %> active
             items across all categories</p>
       </div>
 
@@ -80,7 +81,7 @@
                       Access</span>
                   </div>
                   <button class="btn" type="button"
-                    onclick="khqrCheckout.startPayment('<%= activeCat.id %>', '<%= Number(activeCat.price).toFixed(2) %>', this)"
+                    onclick="khqrCheckout.startPayment('<%= activeCat.id %>', '<%= Number(activeCat.price).toFixed(2) %>', this, <%= !!locals.currentUser %>)"
                     style="padding: 1.1rem 2.5rem; font-size: 1.1rem; font-weight: 800; border-radius: var(--radius); box-shadow: 0 10px 20px color-mix(in srgb, var(--brand) 20%, transparent);">
                     Unlock Collection
                   </button>

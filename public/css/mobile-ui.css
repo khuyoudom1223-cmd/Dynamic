@@ -616,14 +616,16 @@
         color: var(--muted) !important;
     }
 
-    /* Refined Typography Scale with Fluid Sizing */
-    --font-3xl: clamp(2rem, 8vw, 3.5rem);
-    --font-2xl: clamp(1.5rem, 6vw, 2.5rem);
-    --font-xl: clamp(1.25rem, 5vw, 2rem);
-    --font-lg: clamp(1.125rem, 4vw, 1.5rem);
-    --font-md: clamp(1rem, 3vw, 1.125rem);
-    --font-sm: 0.875rem;
-    --font-xs: 0.75rem;
+    :root {
+        /* Refined Typography Scale with Fluid Sizing */
+        --font-3xl: clamp(2rem, 8vw, 3.5rem);
+        --font-2xl: clamp(1.5rem, 6vw, 2.5rem);
+        --font-xl: clamp(1.25rem, 5vw, 2rem);
+        --font-lg: clamp(1.125rem, 4vw, 1.5rem);
+        --font-md: clamp(1rem, 3vw, 1.125rem);
+        --font-sm: 0.875rem;
+        --font-xs: 0.75rem;
+    }
 
     .h1 { font-size: var(--font-3xl) !important; font-weight: 800 !important; letter-spacing: -0.03em !important; }
     .h2 { font-size: var(--font-2xl) !important; font-weight: 800 !important; letter-spacing: -0.02em !important; }

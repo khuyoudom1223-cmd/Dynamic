@@ -43,7 +43,30 @@ class KHQRCheckout {
     }
   }
 
-  async startPayment(productId, amount, btnElement = null) {
+  async startPayment(productId, amount, btnElement = null, isLoggedIn = false) {
+    if (!isLoggedIn) {
+      // Use the global toast if available, otherwise fallback to alert
+      const toast = document.getElementById("global-toast");
+      const toastText = document.getElementById("global-toast-text");
+      
+      if (toast && toastText) {
+        toastText.textContent = "Please log in first before purchasing products.";
+        toast.classList.add("toast-active");
+        
+        // Change icon color to brand/info instead of success
+        const iconContainer = toast.querySelector('div');
+        if (iconContainer) iconContainer.style.background = 'var(--brand)';
+        
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1500);
+      } else {
+        alert("Please log in first before purchasing products.");
+        window.location.href = "/login";
+      }
+      return;
+    }
+
     if (btnElement) {
       btnElement.disabled = true;
       btnElement.classList.add('btn-loading');

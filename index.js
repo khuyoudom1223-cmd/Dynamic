@@ -28,6 +28,7 @@ app.use("/css", express.static(path.join(__dirname, "public", "css")));
 app.use("/js", express.static(path.join(__dirname, "public", "js")));
 app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 app.use("/logo", express.static(path.join(__dirname, "public", "logo")));
+app.get("/favicon.ico", (req, res) => res.sendFile(path.join(__dirname, "public", "favicon.png")));
 
 app.use(
   session({
