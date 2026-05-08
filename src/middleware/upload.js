@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 const multer = require("multer");
 
 const ALLOWED_MIME_TYPES = [

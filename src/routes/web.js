@@ -1,8 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const fs = require("fs");
-const path = require("path");
-const { Readable } = require("stream");
+const fs = require("node:fs");
+const path = require("node:path");
+const { Readable } = require("node:stream");
 const { body, validationResult } = require("express-validator");
 const upload = require("../middleware/upload");
 const { ensureAuth, ensureAdmin } = require("../middleware/auth");
