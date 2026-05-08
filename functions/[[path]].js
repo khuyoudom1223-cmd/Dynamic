@@ -1,5 +1,5 @@
 import app from "../index.js";
-import { expressToWorker } from "express-to-worker";
+import { expressToWorker } from "../lib/express-to-worker.js";
 
 export const onRequest = async (context) => {
   const { request, env } = context;
