@@ -1,14 +1,16 @@
 <%- include('partials/head', { title }) %>
-<%- include('partials/navbar') %>
+  <%- include('partials/navbar') %>
 
-<main class="shell section" style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
-  <div class="card" style="width: 100%; max-width: 400px; padding: 2.5rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-    <h1 style="margin-bottom: 1.5rem; font-size: 1.8rem; color: #111827;">Create Account</h1>
-    <p style="color: #6b7280; margin-bottom: 2rem;">Join our platform to get started</p>
-    
-    <% if (errors && errors.length) { %>
-      <div class="alert" style="background: #fee2e2; color: #b91c1c; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
-        <%= errors.join(', ') %>
+    <main class="shell section" style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
+      <div class="card"
+        style="width: 100%; max-width: 400px; padding: 2.5rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+        <h1 style="margin-bottom: 1.5rem; font-size: 1.8rem; color: #111827;">Create Account</h1>
+        <p style="color: #6b7280; margin-bottom: 2rem;">Join our platform to get started</p>
+
+        <% if (errors && errors.length) { %>
+          <div class="alert"
+            style="background: #fee2e2; color: #b91c1c; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <%= errors.join(', ') %>
       </div>
     <% } %>
 
@@ -78,4 +80,4 @@
   </div>
 </main>
 
-<%- include('partials/footer') %>
+<%- include(' partials/footer') %>

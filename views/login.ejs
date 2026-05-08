@@ -1,14 +1,16 @@
 <%- include('partials/head', { title }) %>
-<%- include('partials/navbar') %>
+  <%- include('partials/navbar') %>
 
-<main class="shell section" style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
-  <div class="card" style="width: 100%; max-width: 400px; padding: 2.5rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-    <h1 style="margin-bottom: 1.5rem; font-size: 1.8rem; color: #111827;">Welcome Back</h1>
-    <p style="color: #6b7280; margin-bottom: 2rem;">Log in to your account to continue</p>
-    
-    <% if (errors && errors.length) { %>
-      <div class="alert" style="background: #fee2e2; color: #b91c1c; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
-        <%= errors.join(', ') %>
+    <main class="shell section" style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
+      <div class="card"
+        style="width: 100%; max-width: 400px; padding: 2.5rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+        <h1 style="margin-bottom: 1.5rem; font-size: 1.8rem; color: #111827;">Welcome Back</h1>
+        <p style="color: #6b7280; margin-bottom: 2rem;">Log in to your account to continue</p>
+
+        <% if (errors && errors.length) { %>
+          <div class="alert"
+            style="background: #fee2e2; color: #b91c1c; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+            <%= errors.join(', ') %>
       </div>
     <% } %>
 
@@ -26,51 +28,56 @@
     
     <div style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--line);">
       <p style="color: #6b7280; font-size: 0.95rem; margin-bottom: 0.75rem;">
-        Don't have an account yet?
-      </p>
-      <a href="/register" class="create-account-link" style="display: inline-flex; align-items: center; gap: 8px; color: var(--brand); font-weight: 800; font-size: 1.1rem; text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; background: var(--brand-soft); transition: all 0.3s ease; position: relative; overflow: hidden;">
-        <span style="background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Create account</span>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--brand);">
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-          <polyline points="12 5 19 12 12 19"></polyline>
-        </svg>
-      </a>
-    </div>
+        Don' t have an account yet? </p>
+              <a href="/register" class="create-account-link"
+                style="display: inline-flex; align-items: center; gap: 8px; color: var(--brand); font-weight: 800; font-size: 1.1rem; text-decoration: none; padding: 0.5rem 1rem; border-radius: 999px; background: var(--brand-soft); transition: all 0.3s ease; position: relative; overflow: hidden;">
+                <span
+                  style="background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Create
+                  account</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--brand);">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </a>
+          </div>
 
-    <style>
-      .create-account-link {
-        animation: linkPulse 2s infinite;
-        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.1);
-      }
-      
-      .create-account-link:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-        background: white !important;
-        text-decoration: underline !important;
-      }
+          <style>
+            .create-account-link {
+              animation: linkPulse 2s infinite;
+              box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.1);
+            }
 
-      @keyframes linkPulse {
-        0% {
-          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
-        }
-        70% {
-          box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
-        }
-        100% {
-          box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
-        }
-      }
+            .create-account-link:hover {
+              transform: scale(1.05);
+              box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+              background: white !important;
+              text-decoration: underline !important;
+            }
 
-      @media (max-width: 480px) {
-        .create-account-link {
-          width: 100%;
-          justify-content: center;
-          padding: 0.8rem;
-        }
-      }
-    </style>
-  </div>
-</main>
+            @keyframes linkPulse {
+              0% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+              }
 
-<%- include('partials/footer') %>
+              70% {
+                box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+              }
+
+              100% {
+                box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+              }
+            }
+
+            @media (max-width: 480px) {
+              .create-account-link {
+                width: 100%;
+                justify-content: center;
+                padding: 0.8rem;
+              }
+            }
+          </style>
+      </div>
+    </main>
+
+    <%- include('partials/footer') %>

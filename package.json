@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
+    "build": "node scripts/bundle-templates.js",
     "check:mongodb": "node scripts/check-mongodb.js",
     "test": "echo \"No automated tests configured yet\""
   },
@@ -34,6 +35,10 @@
     "qrcode": "^1.5.4",
     "sequelize": "^6.37.8",
     "sqlite3": "^6.0.1",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.0",
+    "express-to-worker": "^1.0.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

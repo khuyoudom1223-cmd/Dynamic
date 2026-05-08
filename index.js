@@ -21,6 +21,33 @@ const PORT = Number(process.env.PORT || 3000);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
+// Support for bundled templates in serverless environments
+if (process.env.VERCEL || process.env.CF_PAGES || process.env.CLOUDFLARE) {
+  try {
+    const templates = require("./src/config/templates");
+    const ejs = require("ejs");
+    const originalFileLoader = ejs.fileLoader;
+    
+    ejs.fileLoader = function(filePath) {
+      const viewsPath = app.get("views");
+      let relativePath = filePath.replace(viewsPath, "").replace(/\\/g, "/");
+      if (relativePath.startsWith("/")) relativePath = relativePath.substring(1);
+      
+      if (templates[relativePath]) {
+        return templates[relativePath];
+      }
+      // Fallback to original loader (might fail in pure Worker but helps during build/test)
+      try {
+        return originalFileLoader(filePath);
+      } catch (e) {
+        throw new Error(`Template not found: ${relativePath}`);
+      }
+    };
+  } catch (err) {
+    console.warn("Could not load bundled templates:", err.message);
+  }
+}
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(methodOverride("_method"));
@@ -250,7 +277,9 @@ async function startServer() {
   }
 }
 
-if (!process.env.VERCEL) {
+const isServerless = process.env.VERCEL || process.env.CF_PAGES || process.env.CLOUDFLARE;
+
+if (!isServerless) {
   startServer();
 }
 

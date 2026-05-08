@@ -1,82 +1,100 @@
 <%- include('partials/head', { title }) %>
-<%- include('partials/navbar') %>
+  <%- include('partials/navbar') %>
 
-<main class="shell section" style="padding-top: 4rem; padding-bottom: 6rem;">
-  <div class="section-head" style="margin-bottom: 3rem; text-align: center;">
-    <h1 style="font-size: 3rem; color: #111827; margin-bottom: 0.5rem;">My Purchase History</h1>
-    <p style="color: #6b7280; font-size: 1.1rem; margin: 0;">Review and manage your different purchases.</p>
-  </div>
+    <main class="shell section" style="padding-top: 4rem; padding-bottom: 6rem;">
+      <div class="section-head" style="margin-bottom: 3rem; text-align: center;">
+        <h1 style="font-size: 3rem; color: #111827; margin-bottom: 0.5rem;">My Purchase History</h1>
+        <p style="color: #6b7280; font-size: 1.1rem; margin: 0;">Review and manage your different purchases.</p>
+      </div>
 
-  <% if (!orders || orders.length === 0) { %>
-    <div class="card" style="text-align: center; padding: 4rem; background: #f9fafb; border: 2px dashed #e5e7eb; border-radius: 20px;">
-      <div style="font-size: 4rem; margin-bottom: 1.5rem;">🛍️</div>
-      <h2 style="color: #374151; margin-bottom: 1rem;">No purchases found</h2>
-      <p style="color: #6b7280; margin-bottom: 2rem;">You haven't made any purchases yet. Explore our catalog to find something you love!</p>
-      <a href="/products" class="btn" style="background: #3b82f6; padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 12px;">Start Shopping</a>
-    </div>
-  <% } else { %>
-    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-      <% orders.forEach((order) => { %>
-        <div class="card" style="padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e5e7eb; border-radius: 16px; transition: all 0.2s; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-          <div style="display: flex; gap: 1.5rem; align-items: center;">
-            <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-              <% if (order.product && order.product.image) { %>
-                <img src="<%= order.product.image %>" style="width: 100%; height: 100%; object-fit: cover;" />
-              <% } else if (order.category && order.category.image) { %>
-                <img src="<%= order.category.image %>" style="width: 100%; height: 100%; object-fit: cover;" />
-              <% } else { %>
-                <span style="font-size: 1.5rem;">📦</span>
-              <% } %>
-            </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span style="background: <%= order.type === 'individual_purchase' ? '#eff6ff' : '#fef2f2' %>; color: <%= order.type === 'individual_purchase' ? '#3b82f6' : '#ef4444' %>; padding: 2px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">
-                  <%= order.type === 'individual_purchase' ? 'Item' : 'Subscription' %>
-                </span>
-                <span style="color: #9ca3af; font-size: 0.75rem;">Order #<%= order.id.slice(-6).toUpperCase() %></span>
-              </div>
-              <h3 style="margin: 0; font-size: 1.25rem; color: #111827;">
-                <%= order.product ? (order.product.name || order.product.title) : (order.category ? order.category.name : 'Unknown Item') %>
-              </h3>
-              <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 0.9rem;">
-                Purchased on <%= new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %>
-              </p>
-            </div>
-          </div>
-
-          <div style="text-align: right; display: flex; flex-direction: column; gap: 8px;">
-            <div style="font-size: 1.5rem; font-weight: 800; color: #111827;">
-              $<%= Number(order.total_price || 0).toFixed(2) %>
-            </div>
-            <% if (order.quantity > 1) { %>
-              <div style="color: #6b7280; font-size: 0.8rem;">Qty: <%= order.quantity %></div>
-            <% } %>
-            <% if (order.status === 'paid' || order.status === 'completed') { %>
-              <div style="background: #ecfdf5; color: #059669; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; align-self: flex-end;">
-                <span style="width: 6px; height: 6px; background: #059669; border-radius: 50%;"></span>
-                Paid
-              </div>
-              <% if (order.canWatch && order.product) { %>
-                <a href="/products/<%= order.product.id %>" class="btn" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: #111827;">Watch Now</a>
-              <% } else if (order.category) { %>
-                <a href="/products?category=<%= order.category.id %>" class="btn" style="padding: 0.5rem 1rem; font-size: 0.8rem; background: #3b82f6;">Browse Course</a>
-              <% } %>
-            <% } else if (order.status === 'pending') { %>
-              <div style="background: #fffbeb; color: #d97706; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; align-self: flex-end;">
-                <span style="width: 6px; height: 6px; background: #d97706; border-radius: 50%;"></span>
-                Pending
-              </div>
-            <% } else { %>
-              <div style="background: #fef2f2; color: #ef4444; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; align-self: flex-end;">
-                <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%;"></span>
-                <%= order.status %>
-              </div>
-            <% } %>
-          </div>
+      <% if (!orders || orders.length===0) { %>
+        <div class="card"
+          style="text-align: center; padding: 4rem; background: #f9fafb; border: 2px dashed #e5e7eb; border-radius: 20px;">
+          <div style="font-size: 4rem; margin-bottom: 1.5rem;">🛍️</div>
+          <h2 style="color: #374151; margin-bottom: 1rem;">No purchases found</h2>
+          <p style="color: #6b7280; margin-bottom: 2rem;">You haven't made any purchases yet. Explore our catalog to
+            find something you love!</p>
+          <a href="/products" class="btn"
+            style="background: #3b82f6; padding: 1rem 2.5rem; font-size: 1.1rem; border-radius: 12px;">Start
+            Shopping</a>
         </div>
-      <% }) %>
-    </div>
-  <% } %>
-</main>
+        <% } else { %>
+          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <% orders.forEach((order)=> { %>
+              <div class="card"
+                style="padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e5e7eb; border-radius: 16px; transition: all 0.2s; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                <div style="display: flex; gap: 1.5rem; align-items: center;">
+                  <div
+                    style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <% if (order.product && order.product.image) { %>
+                      <img src="<%= order.product.image %>" style="width: 100%; height: 100%; object-fit: cover;" />
+                      <% } else if (order.category && order.category.image) { %>
+                        <img src="<%= order.category.image %>" style="width: 100%; height: 100%; object-fit: cover;" />
+                        <% } else { %>
+                          <span style="font-size: 1.5rem;">📦</span>
+                          <% } %>
+                  </div>
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                      <span
+                        style="background: <%= order.type === 'individual_purchase' ? '#eff6ff' : '#fef2f2' %>; color: <%= order.type === 'individual_purchase' ? '#3b82f6' : '#ef4444' %>; padding: 2px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">
+                        <%= order.type==='individual_purchase' ? 'Item' : 'Subscription' %>
+                      </span>
+                      <span style="color: #9ca3af; font-size: 0.75rem;">Order #<%= order.id.slice(-6).toUpperCase() %>
+                          </span>
+                    </div>
+                    <h3 style="margin: 0; font-size: 1.25rem; color: #111827;">
+                      <%= order.product ? (order.product.name || order.product.title) : (order.category ?
+                        order.category.name : 'Unknown Item' ) %>
+                    </h3>
+                    <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 0.9rem;">
+                      Purchased on <%= new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric' ,
+                        month: 'long' , day: 'numeric' }) %>
+                    </p>
+                  </div>
+                </div>
 
-<%- include('partials/footer') %>
+                <div style="text-align: right; display: flex; flex-direction: column; gap: 8px;">
+                  <div style="font-size: 1.5rem; font-weight: 800; color: #111827;">
+                    $<%= Number(order.total_price || 0).toFixed(2) %>
+                  </div>
+                  <% if (order.quantity> 1) { %>
+                    <div style="color: #6b7280; font-size: 0.8rem;">Qty: <%= order.quantity %>
+                    </div>
+                    <% } %>
+                      <% if (order.status==='paid' || order.status==='completed' ) { %>
+                        <div
+                          style="background: #ecfdf5; color: #059669; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; align-self: flex-end;">
+                          <span style="width: 6px; height: 6px; background: #059669; border-radius: 50%;"></span>
+                          Paid
+                        </div>
+                        <% if (order.canWatch && order.product) { %>
+                          <a href="/products/<%= order.product.id %>" class="btn"
+                            style="padding: 0.5rem 1rem; font-size: 0.8rem; background: #111827;">Watch Now</a>
+                          <% } else if (order.category) { %>
+                            <a href="/products?category=<%= order.category.id %>" class="btn"
+                              style="padding: 0.5rem 1rem; font-size: 0.8rem; background: #3b82f6;">Browse Course</a>
+                            <% } %>
+                              <% } else if (order.status==='pending' ) { %>
+                                <div
+                                  style="background: #fffbeb; color: #d97706; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; align-self: flex-end;">
+                                  <span
+                                    style="width: 6px; height: 6px; background: #d97706; border-radius: 50%;"></span>
+                                  Pending
+                                </div>
+                                <% } else { %>
+                                  <div
+                                    style="background: #fef2f2; color: #ef4444; padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; align-self: flex-end;">
+                                    <span
+                                      style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%;"></span>
+                                    <%= order.status %>
+                                  </div>
+                                  <% } %>
+                </div>
+              </div>
+              <% }) %>
+          </div>
+          <% } %>
+    </main>
+
+    <%- include('partials/footer') %>

@@ -8,33 +8,43 @@ const upload = require("../middleware/upload");
 const { ensureAuth, ensureAdmin } = require("../middleware/auth");
 const { getDb, toObjectId } = require("../config/mongodb");
 
-
 function getValidationErrors(req) {
   const errors = validationResult(req);
   return errors.isEmpty() ? [] : errors.array().map((item) => item.msg);
 }
-
+// Extracts validation error messages from the request object and returns them as an array of strings
+// ដកយកសារលើកដង្ហាប់ពីការផ្ទៀងផ្ទាត់សំណើ ហើយត្រឡប់វាជាបញ្ជីខ្សែអក្សរ
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+// Escapes special regex characters in a string to safely use it in regex patterns
+// លុបបង្ហាញតួអក្សរពិសេសក្នុងខ្សែអក្សរដើម្បីប្រើប្រាស់វាក្នុងលំនាំ regex ដោយសុវត្ថិភាព
 
 function formatPrice(value) {
   return Number(value || 0).toFixed(2);
 }
+// Formats a price value to exactly 2 decimal places as a string
+// រៀបចំតម្លៃឱ្យមាន 2 ខ្ទង់ទសភាគពិតប្រាកដ
 
 function buildTelegramMessageLink(baseLink, message) {
   const safeBaseLink = String(baseLink || "https://t.me/kuhyoudom").trim();
   const separator = safeBaseLink.includes("?") ? "&" : "?";
   return `${safeBaseLink}${separator}text=${encodeURIComponent(message)}`;
 }
+// Constructs a Telegram link with a pre-filled message, using the provided base link or a default
+// សាងសង់តំណ Telegram ដែលមានសារជាមុន ដោយប្រើលីងមូលដ្ឋាន ឬលីងលម្អិត
 
 function isLocalUploadPath(value) {
   return typeof value === "string" && value.startsWith("/uploads/");
 }
+// Checks if a value is a local upload path (starts with /uploads/)
+// ពិនិត្យថាតម្លៃជាផ្លូវឯកសារក្នុងស្រុក (ចាប់ផ្តើមដោយ /uploads/)
 
 function isVideoFileName(value) {
   return /\.(mp4|webm|mov)$/i.test(String(value || ""));
 }
+// Checks if a filename has a video extension (mp4, webm, or mov)
+// ពិនិត្យថាឈ្មោះឯកសារម្ជុលជាឯកសារវីដេអូ (mp4, webm ឬ mov)
 
 async function hasPaidCategoryAccess(db, userId, categoryId) {
   if (!userId || !categoryId) {
@@ -55,6 +65,8 @@ async function hasPaidCategoryAccess(db, userId, categoryId) {
 
   return Boolean(paidOrder);
 }
+// Checks if a user has a paid order for a specific category, returning true if they do
+// ពិនិត្យថាអ្នកប្រើប្រាស់មាននិក្ខេបបង់ប្រាក់សម្រាប់ប្រភេទជាក់លាក់ ត្រឡប់ true ប្រសិនបើពួកគេមាន
 
 async function hasPaidProductAccess(db, userId, productId) {
   if (!userId || !productId) return false;
@@ -70,6 +82,8 @@ async function hasPaidProductAccess(db, userId, productId) {
 
   return Boolean(paidOrder);
 }
+// Checks if a user has a paid order for a specific product, returning true if they do
+// ពិនិត្យថាអ្នកប្រើប្រាស់មាននិក្ខេបបង់ប្រាក់សម្រាប់ផលិតផលជាក់លាក់ ត្រឡប់ true ប្រសិនបើពួកគេមាន
 
 async function canAccessProductVideo(db, product, user) {
   if (!product || !product.video) {
@@ -93,6 +107,8 @@ async function canAccessProductVideo(db, product, user) {
 
   return await hasPaidProductAccess(db, user?.id, product._id);
 }
+// Determines if a user can access a product's video based on admin status, category price, product type, and purchase history
+// កំណត់ថាតើអ្នកប្រើប្រាស់អាចចូលទៅលើវីដេអូផលិតផលដោយផ្អែកលើតួនាទីរដ្ឋបាល តម្លៃប្រភេទ ប្រភេទផលិតផល និងប្រវត្តិការទិញ
 
 async function getPaidCategoryIdSet(db, userId) {
   if (!userId) {
@@ -115,6 +131,8 @@ async function getPaidCategoryIdSet(db, userId) {
       .filter(Boolean)
   );
 }
+// Returns a Set of all category IDs that a user has purchased (paid orders only)
+// ត្រឡប់សំណុំនៃលេខសម្គាល់ប្រភេទទាំងអស់ដែលអ្នកប្រើប្រាស់បានទិញ (មានតែលម្អិតបង់ប្រាក់ប៉ុណ្ណោះ)
 
 function buildPublicProductStatusClause() {
   return {
@@ -126,10 +144,14 @@ function buildPublicProductStatusClause() {
     ]
   };
 }
+// Returns a MongoDB query clause to filter products that are publicly visible (active or no status)
+// ត្រឡប់លក្ខខណ្ឌសំណួរ MongoDB ដើម្បីត្រង់ផលិតផលដែលមាននូវលក្ខណៈដឹងខ្លួន (សកម្ម ឬគ្មានស្ថានភាព)
 
 function isPublicProductStatus(value) {
   return value == null || String(value).toLowerCase() === "active";
 }
+// Checks if a product status indicates it is publicly visible (null, undefined, or 'active')
+// ពិនិត្យថាស្ថានភាពផលិតផលបង្ហាញថាវាមាននូវលក្ខណៈដឹងខ្លួន (គ្មាន ឬ 'សកម្ម')
 
 async function resolveProductForMedia(db, filename) {
   const uploadPath = `/uploads/${filename}`;
@@ -142,6 +164,8 @@ async function resolveProductForMedia(db, filename) {
     ]
   });
 }
+// Finds and returns a product that contains the specified media filename in its image or video fields
+// ស្វែងរក ហើយត្រឡប់ផលិតផលដែលមាន filename មិនទាន់បង្ហាញក្នុងវាលរូបភាព ឬវីដេអូរបស់វា
 
 async function proxyRemoteMedia(req, res, remoteUrl) {
   const response = await fetch(remoteUrl, {
@@ -179,6 +203,8 @@ async function proxyRemoteMedia(req, res, remoteUrl) {
   res.status(response.status);
   Readable.fromWeb(response.body).pipe(res);
 }
+// Proxies remote media from a URL to the client, forwarding response headers and supporting range requests
+// ធ្វើឱ្យលឺក media ពីចម្ងាយទៅក្រុមបាល់ ឆ្លងផ្ទៀងផ្ទាត់ headers ប្រតិកម្ម ហើយគាំទ្រសំណើលេខ
 
 function normalizeId(doc) {
   if (!doc) return null;
@@ -187,6 +213,8 @@ function normalizeId(doc) {
     id: doc._id.toString()
   };
 }
+// Converts a MongoDB document's _id field to an id field as a string for easier client-side handling
+// បំលែង MongoDB ឯកសារ _id ទៅ id វាល ដែលបង្ហាញជាខ្សែអក្សរ
 
 function toCategoryMap(categories) {
   const map = new Map();
@@ -195,6 +223,8 @@ function toCategoryMap(categories) {
   });
   return map;
 }
+// Converts an array of categories into a Map keyed by their MongoDB _id (as strings) for fast lookups
+// បំលែង array នៃប្រភេទទៅក្នុង Map ដែលមានលក្ខណៈដោយ MongoDB _id សម្រាប់ការស្វែងរកលឿន
 
 const DEFAULT_CATEGORY_NAMES = [
   "Learning hub",
@@ -226,10 +256,14 @@ const CATEGORY_SLUG_ROUTES = [
 function normalizeCategoryName(value) {
   return String(value || "").trim().replace(/\s+/g, " ");
 }
+// Normalizes a category name by trimming whitespace and collapsing multiple spaces into single spaces
+// ធម្មតាលក្ខណៈនាមប្រភេទដោយលុបចោលលក្ខណៈប្រវែង ហើយលុបចោលលក្ខណៈឯកទេសច្រើនទៅលក្ខណៈឯកទេសលម្អ
 
 function normalizeCategoryKey(value) {
   return normalizeCategoryName(value).toLowerCase();
 }
+// Normalizes a category name to a lowercase key for case-insensitive comparisons
+// ធម្មតាលក្ខណៈលេខប្រភេទទៅលើលក្ខណៈគន្លឹះដែលមាន lowercase សម្រាប់ការប្រៀបធៀkommune
 
 async function ensureDefaultCategories(db) {
   const existingCategories = await db.collection("categories").find({}, { projection: { name: 1 } }).toArray();
@@ -243,6 +277,8 @@ async function ensureDefaultCategories(db) {
     await db.collection("categories").insertMany(categoriesToInsert);
   }
 }
+// Ensures all default categories exist in the database by inserting any that are missing
+// ធានាថាប្រភេទលម្អិតទាំងអស់មាននៅក្នុង database ដោយការដាក់បញ្ចូលដែលបាត់
 
 async function createCategoryIfValid(db, rawName, rawPrice = 0, type = "course", imageUrl = null) {
   const name = normalizeCategoryName(rawName);
@@ -281,6 +317,8 @@ async function createCategoryIfValid(db, rawName, rawPrice = 0, type = "course",
   const category = await db.collection("categories").findOne({ _id: result.insertedId });
   return { category, alreadyExists: false };
 }
+// Creates a new category after validating the name and enforcing price rules based on category type
+// បង្កើតប្រភេទថ្មីបន្ទាប់ពីការផ្ទៀងផ្ទាត់ លក្ខណៈលេខ ហើយការ enforce rules តម្លៃលើផ្អែកលើប្រភេទ
 
 function resolveUploadedFileUrl(file) {
   if (!file) return null;
@@ -292,6 +330,8 @@ function resolveUploadedFileUrl(file) {
   }
   return null;
 }
+// Resolves the URL of an uploaded file, returning either a full URL or a relative /uploads/ path
+// ដោះស្រាយ URL នៃឯកសារដែលបាន upload ត្រឡប់ URL ពេញលេញ ឬផ្លូវទាក់ទង /uploads/
 
 function hasCloudinaryCredentials() {
   return Boolean(
@@ -300,6 +340,8 @@ function hasCloudinaryCredentials() {
     process.env.CLOUDINARY_API_SECRET
   );
 }
+// Checks if all required Cloudinary environment variables are configured
+// ពិនិត្យលក្ខខណ្ឌ Cloudinary ដែលចាំបាច់ទាំងអស់ត្រូវបានកំណត់នៅក្នុងបរិស្ថាន
 
 async function pingCloudinary() {
   const { v2: cloudinary } = require("cloudinary");
@@ -318,6 +360,8 @@ async function pingCloudinary() {
     });
   });
 }
+// Pings the Cloudinary API to verify that credentials are valid and the service is reachable
+// ឈានលើ API Cloudinary ដើម្បីផ្ទៀងផ្ទាត់ថាលក្ខខណ្ឌមានសុពលភាព ហើយសេវាកម្មអាចឈានលើបាន
 
 function toProductPayload(req, existingProduct = null) {
   const rawTitle = (req.body.name || req.body.title || "").trim();
@@ -398,6 +442,8 @@ function toProductPayload(req, existingProduct = null) {
     }
   };
 }
+// Converts and validates request body into a product payload, handling files, videos, pricing, and stock rules
+// បំលែង ហើយផ្ទៀងផ្ទាត់ request body ក្នុង product payload ដោយដោះស្រាយឯកសារ វីដេអូ តម្លៃ ហើយ stock rules
 
 async function getDashboardStats(db) {
   const [users, products, categories, orders] = await Promise.all([
@@ -419,6 +465,8 @@ async function getDashboardStats(db) {
 
   return { users, products, categories, orders, ordersByStatus };
 }
+// Retrieves dashboard statistics including counts of users, products, categories, orders and breakdown of orders by status
+// ទទួលបានលក្ខណៈលេខផ្ទាំងឧបករណ៍ រួមទាំង counts នៃ users ផលិតផល ប្រភេទ orders ហើយការប្រៀបធៀប នៃ orders ដោយស្ថានភាព
 
 module.exports = function webRoutes(router) {
   CATEGORY_SLUG_ROUTES.forEach(({ path, name }) => {
@@ -658,10 +706,20 @@ module.exports = function webRoutes(router) {
 
     if (isLocalUploadPath(videoPath)) {
       const filename = path.basename(videoPath);
+      const isServerless = process.env.VERCEL || process.env.CF_PAGES || process.env.CLOUDFLARE;
+
+      if (isServerless) {
+        // In serverless, we usually serve from public folder via CDN or Cloudinary
+        // If it's a local path, we redirect to the static asset URL
+        return res.redirect(videoPath);
+      }
+
       const filePath = path.join(process.cwd(), "public", "uploads", filename);
       try {
-        await fs.promises.access(filePath, fs.constants.R_OK);
-        return res.sendFile(filePath);
+        if (fs.existsSync(filePath)) {
+          return res.sendFile(filePath);
+        }
+        return res.status(404).render("error", { title: "Not Found", message: "Video file not found" });
       } catch (_error) {
         return res.status(404).render("error", { title: "Not Found", message: "Video file not found" });
       }
@@ -681,9 +739,16 @@ module.exports = function webRoutes(router) {
       return res.status(404).render("error", { title: "Not Found", message: "File not found" });
     }
 
+    const isServerless = process.env.VERCEL || process.env.CF_PAGES || process.env.CLOUDFLARE;
+    if (isServerless) {
+      return res.redirect(`/uploads/${filename}`);
+    }
+
     const filePath = path.join(process.cwd(), "public", "uploads", filename);
     try {
-      await fs.promises.access(filePath, fs.constants.R_OK);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).render("error", { title: "Not Found", message: "File not found" });
+      }
     } catch (_error) {
       return res.status(404).render("error", { title: "Not Found", message: "File not found" });
     }
