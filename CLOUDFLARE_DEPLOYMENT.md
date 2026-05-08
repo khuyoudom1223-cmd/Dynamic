@@ -58,7 +58,7 @@ After deployment completes, check these URLs:
 
 - **Read-Only Filesystem**: You cannot save files to the local `uploads` folder on Cloudflare. You **must** set up Cloudinary for file uploads to work.
 - **Cold Starts**: The first request after some inactivity might be slightly slower as the Worker starts up and connects to MongoDB.
-- **Bundle Size**: We have added `express-to-worker` to bridge Express. If your bundle exceeds 1MB (Free tier) or 10MB (Paid), you may need to optimize your dependencies.
+- **Bundle Size**: We have added a local bridge library (`lib/express-to-worker.js`) to bridge Express. If your bundle exceeds 1MB (Free tier) or 10MB (Paid), you may need to optimize your dependencies.
 - **EJS Templates**: Templates are bundled into the code during the build step. If you add new `.ejs` files, make sure the build command runs successfully.
 
 ---
